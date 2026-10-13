@@ -9,9 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 import shutil
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_PATH = os.path.join(BASE_DIR, "clinic.db")
-UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ADMIN_PIN = "1234"  # Senha padrão de acesso ao Painel da Clínica
@@ -401,21 +402,30 @@ def delete_service(service_id: int, _=Depends(verify_admin)):
     conn.close()
     return {"success": True, "id": service_id}
 
-# Rotas de Arquivos
-static_dir = os.path.join(BASE_DIR, "static")
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+# Rotas de Arquivos Estáticos com Fallback Seguro
+os.makedirs(STATIC_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 def index_redirect():
-    return FileResponse(os.path.join(static_dir, "agendar.html"))
+    agendar_file = os.path.join(STATIC_DIR, "agendar.html")
+    if os.path.exists(agendar_file):
+        return FileResponse(agendar_file)
+    return JSONResponse({"status": "Laser Clinic App está online!", "instrucao": "Arquivos estáticos sendo carregados."})
 
 @app.get("/agendar")
 def client_booking_page():
-    return FileResponse(os.path.join(static_dir, "agendar.html"))
+    agendar_file = os.path.join(STATIC_DIR, "agendar.html")
+    if os.path.exists(agendar_file):
+        return FileResponse(agendar_file)
+    raise HTTPException(status_code=404, detail="Página agendar.html não encontrada na pasta static.")
 
 @app.get("/admin")
 def admin_panel_page():
-    return FileResponse(os.path.join(static_dir, "admin.html"))
+    admin_file = os.path.join(STATIC_DIR, "admin.html")
+    if os.path.exists(admin_file):
+        return FileResponse(admin_file)
+    raise HTTPException(status_code=404, detail="Página admin.html não encontrada na pasta static.")
 
 if __name__ == "__main__":
     import uvicorn
