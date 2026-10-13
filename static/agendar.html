@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agendamento Online - Depilação a Laser</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-rose-50 via-purple-50 to-pink-50 min-h-screen text-slate-800 antialiased">
+  
+  <!-- Header Exclusivo para o Cliente (sem nenhum link ou menção a painel interno) -->
+  <header class="py-4 px-4 bg-white/90 backdrop-blur border-b border-rose-100 shadow-sm sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Logotipo da Clínica (Imagem ou Ícone) -->
+        <div id="clinic-logo-wrapper" class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-pink-200 overflow-hidden flex-shrink-0">
+          <i id="clinic-logo-icon" class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+          <img id="clinic-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+        </div>
+        <div>
+          <h1 id="clinic-display-name" class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-rose-600 to-purple-600 bg-clip-text text-transparent">LaserGlow Clinic</h1>
+          <p id="clinic-display-subtitle" class="text-xs text-slate-500 font-medium">Depilação a Laser de Alta Tecnologia</p>
+        </div>
+      </div>
+      <div class="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        Agenda Aberta em Tempo Real
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto p-4 sm:p-6 my-6">
+    <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl border border-white/80">
+      
+      <!-- Indicador de Etapas -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between relative">
+          <div class="w-full absolute top-1/2 -translate-y-1/2 left-0 h-1 bg-slate-200 z-0"></div>
+          <div id="step-bar" class="w-0 absolute top-1/2 -translate-y-1/2 left-0 h-1 bg-rose-500 z-0 transition-all duration-300"></div>
+
+          <div class="step-indicator relative z-10 flex flex-col items-center" data-step="1">
+            <span class="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold text-sm shadow-md">1</span>
+            <span class="text-xs mt-2 font-medium text-slate-700">Pacote / Sessão</span>
+          </div>
+          <div class="step-indicator relative z-10 flex flex-col items-center" data-step="2">
+            <span class="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">2</span>
+            <span class="text-xs mt-2 font-medium text-slate-500">Data e Horário</span>
+          </div>
+          <div class="step-indicator relative z-10 flex flex-col items-center" data-step="3">
+            <span class="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm">3</span>
+            <span class="text-xs mt-2 font-medium text-slate-500">Seus Dados</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ETAPA 1: ESCOLHA DE PACOTE OU SESSÃO AVULSA -->
+      <section id="step-1" class="space-y-5">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900">1. Escolha o Procedimento ou Pacote</h2>
+          <p class="text-sm text-slate-500">Selecione o plano ideal para você:</p>
+        </div>
+
+        <!-- Filtro de Categorias (Pacotes vs Sessões Avulsas) -->
+        <div class="flex p-1 bg-slate-100 rounded-2xl w-full sm:w-auto self-start border border-slate-200">
+          <button type="button" id="tab-category-all" onclick="filterCategory('all')" class="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-rose-600 shadow-sm transition">
+            Todos
+          </button>
+          <button type="button" id="tab-category-pacotes" onclick="filterCategory('Pacote Promocional')" class="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-gift text-rose-500"></i> Pacotes Promocionais
+          </button>
+          <button type="button" id="tab-category-avulsas" onclick="filterCategory('Sessão Avulsa')" class="flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition">
+            Sessões Avulsas
+          </button>
+        </div>
+
+        <div id="services-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+          <!-- Carregamento dinâmico -->
+          <div class="animate-pulse bg-slate-100 h-24 rounded-2xl"></div>
+          <div class="animate-pulse bg-slate-100 h-24 rounded-2xl"></div>
+        </div>
+
+        <div class="pt-4 flex justify-end">
+          <button id="btn-to-step-2" disabled class="px-6 py-3 rounded-xl bg-slate-300 text-slate-500 font-medium cursor-not-allowed transition flex items-center gap-2">
+            Continuar para Data e Horário <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- ETAPA 2: DATA E HORÁRIO -->
+      <section id="step-2" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900">2. Escolha o Dia e Horário Disponível</h2>
+          <p class="text-sm text-slate-500">Horários livres atualizados automaticamente.</p>
+        </div>
+
+        <!-- Seletor de Data -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-2">Selecione o Dia Desejado:</label>
+          <input type="date" id="input-date" class="w-full sm:w-auto px-4 py-3 rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500 text-slate-800 font-medium shadow-sm">
+        </div>
+
+        <!-- Grid de Horários -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <label class="text-sm font-semibold text-slate-700">Horários da Clínica:</label>
+            <span class="text-xs text-slate-500 flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Livre
+              <span class="w-2.5 h-2.5 rounded-full bg-slate-300 inline-block ml-2"></span> Reservado
+            </span>
+          </div>
+          
+          <div id="slots-container" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
+            <p class="col-span-full text-slate-400 text-sm py-4">Selecione uma data acima para visualizar os horários livres.</p>
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-between items-center border-t border-slate-100">
+          <button id="btn-back-to-step-1" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Voltar
+          </button>
+          <button id="btn-to-step-3" disabled class="px-6 py-3 rounded-xl bg-slate-300 text-slate-500 font-medium cursor-not-allowed transition flex items-center gap-2">
+            Continuar para Seus Dados <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+
+      <!-- ETAPA 3: DADOS DO CLIENTE & CONFIRMAÇÃO -->
+      <section id="step-3" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-bold text-slate-900">3. Seus Dados para Reserva</h2>
+          <p class="text-sm text-slate-500">Usaremos seu WhatsApp para lembretes e confirmação do atendimento.</p>
+        </div>
+
+        <!-- Resumo da Escolha -->
+        <div class="bg-rose-50/70 border border-rose-200/80 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <div id="summary-badge" class="text-xs uppercase font-bold tracking-wider text-rose-600 mb-0.5">Pacote / Sessão</div>
+            <div id="summary-service" class="font-bold text-slate-800 text-base">Nome do Procedimento</div>
+            <div id="summary-datetime" class="text-sm text-slate-600 mt-1"><i class="fa-regular fa-calendar mr-1"></i> Data e Horário</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs text-slate-500">Valor</div>
+            <div id="summary-price" class="text-xl font-extrabold text-rose-600">R$ --</div>
+          </div>
+        </div>
+
+        <form id="form-booking" class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Seu Nome Completo *</label>
+            <input type="text" id="client-name" required placeholder="Ex: Juliana Mendes" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">WhatsApp com DDD *</label>
+              <input type="tel" id="client-phone" required placeholder="(11) 98765-4321" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
+              <span class="text-xs text-slate-500">Lembretes e avisos serão enviados neste número</span>
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1">E-mail (opcional)</label>
+              <input type="email" id="client-email" placeholder="seuemail@exemplo.com" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">Observações ou dúvidas (opcional)</label>
+            <textarea id="client-notes" rows="2" placeholder="Ex: Primeira vez no laser, pele sensível..." class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm"></textarea>
+          </div>
+
+          <div class="pt-4 flex justify-between items-center border-t border-slate-100">
+            <button type="button" id="btn-back-to-step-2" class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+              <i class="fa-solid fa-arrow-left mr-1"></i> Voltar
+            </button>
+            <button type="submit" id="btn-submit" class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold shadow-lg shadow-pink-200 hover:shadow-xl transition flex items-center gap-2">
+              <i class="fa-solid fa-calendar-check"></i> Concluir Agendamento
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- TELA DE SUCESSO -->
+      <section id="step-success" class="space-y-6 text-center py-6 hidden">
+        <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mx-auto shadow-inner animate-bounce">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-2xl font-bold text-slate-900">Agendamento Realizado com Sucesso!</h2>
+          <p class="text-slate-600 max-w-md mx-auto text-sm">
+            Seu horário foi agendado em nossa clínica. Você receberá a confirmação em seu WhatsApp.
+          </p>
+        </div>
+
+        <div id="confirmation-details" class="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-left max-w-md mx-auto space-y-3">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="pt-4 flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <a id="btn-whatsapp-confirm" target="_blank" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-md shadow-emerald-200 flex items-center justify-center gap-2 transition">
+            <i class="fa-brands fa-whatsapp text-lg"></i> Abrir WhatsApp da Clínica
+          </a>
+          <button onclick="window.location.reload()" class="w-full sm:w-auto px-6 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-medium transition">
+            Fazer Outro Agendamento
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Recomendações antes da sessão -->
+    <div class="mt-8 bg-white/80 backdrop-blur rounded-2xl p-5 border border-rose-100 text-xs text-slate-600 space-y-2 shadow-sm">
+      <div class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+        <i class="fa-solid fa-circle-info text-rose-500"></i> Dicas importantes para sua sessão:
+      </div>
+      <ul class="list-disc list-inside space-y-1 text-slate-500 pl-1">
+        <li>Raspar a área a ser tratada com lâmina 1 dia antes da sessão de depilação a laser.</li>
+        <li>Evitar exposição solar direta na área antes e logo após o procedimento.</li>
+        <li>Não arrancar os pelos pela raiz (não utilizar pinça ou cera quente/fria).</li>
+      </ul>
+    </div>
+  </main>
+
+  <script>
+    let services = [];
+    let currentCategoryFilter = 'all';
+    let selectedService = null;
+    let selectedDate = '';
+    let selectedTime = null;
+
+    async function loadServices() {
+      try {
+        const res = await fetch('/api/services');
+        services = await res.json();
+        renderServicesGrid();
+      } catch (err) {
+        console.error("Erro ao carregar serviços", err);
+      }
+    }
+
+    function filterCategory(cat) {
+      currentCategoryFilter = cat;
+      const btnAll = document.getElementById('tab-category-all');
+      const btnPacotes = document.getElementById('tab-category-pacotes');
+      const btnAvulsas = document.getElementById('tab-category-avulsas');
+
+      [btnAll, btnPacotes, btnAvulsas].forEach(btn => {
+        btn.className = "flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition";
+      });
+
+      if (cat === 'all') {
+        btnAll.className = "flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-rose-600 shadow-sm transition";
+      } else if (cat === 'Pacote Promocional') {
+        btnPacotes.className = "flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-rose-600 shadow-sm transition flex items-center justify-center gap-1.5";
+      } else {
+        btnAvulsas.className = "flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-rose-600 shadow-sm transition";
+      }
+
+      renderServicesGrid();
+    }
+
+    function renderServicesGrid() {
+      const grid = document.getElementById('services-grid');
+      grid.innerHTML = '';
+
+      const filtered = currentCategoryFilter === 'all' 
+        ? services 
+        : services.filter(s => s.category === currentCategoryFilter);
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<div class="col-span-full py-6 text-center text-slate-400">Nenhum pacote ou procedimento nesta categoria.</div>';
+        return;
+      }
+
+      filtered.forEach(s => {
+        const isPackage = s.category === 'Pacote Promocional' || (s.sessions_count && s.sessions_count > 1);
+        const card = document.createElement('div');
+        const isSelected = selectedService && selectedService.id === s.id;
+
+        card.className = `service-card relative border-2 ${isSelected ? 'border-rose-500 bg-rose-50/50 ring-2 ring-rose-200' : 'border-slate-200/80 bg-white hover:border-rose-300'} rounded-2xl p-4 cursor-pointer transition flex justify-between items-center shadow-sm hover:shadow`;
+        card.onclick = () => selectService(s, card);
+        
+        const badgeHtml = isPackage 
+          ? `<span class="inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 tracking-wide mb-1"><i class="fa-solid fa-gift mr-1"></i> Pacote (${s.sessions_count || 10} Sessões)</span>`
+          : `<span class="inline-block text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 tracking-wide mb-1">Sessão Avulsa</span>`;
+
+        card.innerHTML = `
+          <div>
+            ${badgeHtml}
+            <div class="font-bold text-slate-800 text-base leading-snug">${s.name}</div>
+            <div class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-clock mr-1"></i> ${s.duration_minutes} min por sessão</div>
+          </div>
+          <div class="text-right pl-3">
+            <div class="text-rose-600 font-extrabold text-lg">R$ ${s.price.toFixed(2).replace('.', ',')}</div>
+            ${isPackage && s.sessions_count > 1 ? `<div class="text-[11px] text-slate-400">R$ ${(s.price / s.sessions_count).toFixed(2).replace('.', ',')}/sessão</div>` : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function selectService(s, cardElement) {
+      selectedService = s;
+      renderServicesGrid();
+
+      const btn = document.getElementById('btn-to-step-2');
+      btn.disabled = false;
+      btn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+      btn.classList.add('bg-rose-500', 'hover:bg-rose-600', 'text-white', 'cursor-pointer', 'shadow-md');
+    }
+
+    async function loadSlots(date) {
+      const container = document.getElementById('slots-container');
+      container.innerHTML = '<div class="col-span-full py-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Consultando horários livres...</div>';
+      try {
+        const res = await fetch(`/api/available-slots?date=${date}`);
+        const data = await res.json();
+        container.innerHTML = '';
+        
+        let availableCount = 0;
+        data.slots.forEach(slot => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          if (slot.available) {
+            availableCount++;
+            btn.className = "slot-btn py-2 px-1 text-sm font-semibold rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-800 transition";
+            btn.innerText = slot.time;
+            btn.onclick = () => selectTimeSlot(slot.time, btn);
+          } else {
+            btn.disabled = true;
+            btn.className = "py-2 px-1 text-sm font-medium rounded-xl border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed line-through";
+            btn.innerText = slot.time;
+          }
+          container.appendChild(btn);
+        });
+
+        if (availableCount === 0) {
+          container.innerHTML = '<div class="col-span-full py-4 text-center text-rose-500 font-medium">Todos os horários estão ocupados nesta data. Selecione outro dia por favor.</div>';
+        }
+      } catch (err) {
+        container.innerHTML = '<div class="col-span-full py-4 text-center text-red-500">Erro ao carregar horários.</div>';
+      }
+    }
+
+    function selectTimeSlot(time, btn) {
+      selectedTime = time;
+      document.querySelectorAll('.slot-btn').forEach(b => {
+        b.classList.remove('bg-emerald-600', 'text-white', 'ring-2', 'ring-emerald-300');
+        b.classList.add('bg-emerald-50', 'text-emerald-800');
+      });
+      btn.classList.remove('bg-emerald-50', 'text-emerald-800');
+      btn.classList.add('bg-emerald-600', 'text-white', 'ring-2', 'ring-emerald-300');
+
+      const nextBtn = document.getElementById('btn-to-step-3');
+      nextBtn.disabled = false;
+      nextBtn.classList.remove('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+      nextBtn.classList.add('bg-rose-500', 'hover:bg-rose-600', 'text-white', 'cursor-pointer', 'shadow-md');
+    }
+
+    function goToStep(step) {
+      document.getElementById('step-1').classList.add('hidden');
+      document.getElementById('step-2').classList.add('hidden');
+      document.getElementById('step-3').classList.add('hidden');
+      document.getElementById('step-success').classList.add('hidden');
+
+      const bar = document.getElementById('step-bar');
+      if (step === 1) bar.style.width = '0%';
+      if (step === 2) bar.style.width = '50%';
+      if (step === 3) bar.style.width = '100%';
+
+      document.querySelectorAll('.step-indicator').forEach(ind => {
+        const num = parseInt(ind.getAttribute('data-step'));
+        const circle = ind.querySelector('span:first-child');
+        if (num <= step) {
+          circle.classList.add('bg-rose-500', 'text-white');
+          circle.classList.remove('bg-slate-200', 'text-slate-600');
+        } else {
+          circle.classList.remove('bg-rose-500', 'text-white');
+          circle.classList.add('bg-slate-200', 'text-slate-600');
+        }
+      });
+
+      if (step === 1) document.getElementById('step-1').classList.remove('hidden');
+      if (step === 2) document.getElementById('step-2').classList.remove('hidden');
+      if (step === 3) {
+        document.getElementById('step-3').classList.remove('hidden');
+        document.getElementById('summary-service').textContent = selectedService.name;
+        document.getElementById('summary-badge').textContent = selectedService.category || 'Procedimento';
+        const [y, m, d] = selectedDate.split('-');
+        document.getElementById('summary-datetime').innerHTML = `<i class="fa-regular fa-calendar mr-1"></i> ${d}/${m}/${y} às ${selectedTime}`;
+        document.getElementById('summary-price').textContent = `R$ ${selectedService.price.toFixed(2).replace('.', ',')}`;
+      }
+    }
+
+    document.getElementById('btn-to-step-2').addEventListener('click', () => {
+      goToStep(2);
+      if (!selectedDate) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const yyyy = tomorrow.getFullYear();
+        const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const dd = String(tomorrow.getDate()).padStart(2, '0');
+        const defaultDate = `${yyyy}-${mm}-${dd}`;
+        document.getElementById('input-date').value = defaultDate;
+        document.getElementById('input-date').min = new Date().toISOString().split('T')[0];
+        selectedDate = defaultDate;
+        loadSlots(defaultDate);
+      }
+    });
+
+    document.getElementById('btn-back-to-step-1').addEventListener('click', () => goToStep(1));
+    document.getElementById('btn-to-step-3').addEventListener('click', () => goToStep(3));
+    document.getElementById('btn-back-to-step-2').addEventListener('click', () => goToStep(2));
+
+    document.getElementById('input-date').addEventListener('change', (e) => {
+      selectedDate = e.target.value;
+      selectedTime = null;
+      const nextBtn = document.getElementById('btn-to-step-3');
+      nextBtn.disabled = true;
+      nextBtn.classList.remove('bg-rose-500', 'hover:bg-rose-600', 'text-white', 'cursor-pointer');
+      nextBtn.classList.add('bg-slate-300', 'text-slate-500', 'cursor-not-allowed');
+      if (selectedDate) {
+        loadSlots(selectedDate);
+      }
+    });
+
+    document.getElementById('form-booking').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('client-name').value.trim();
+      const phone = document.getElementById('client-phone').value.trim();
+      const email = document.getElementById('client-email').value.trim();
+      const notes = document.getElementById('client-notes').value.trim();
+
+      const btnSubmit = document.getElementById('btn-submit');
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
+
+      try {
+        const res = await fetch('/api/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            phone,
+            email,
+            service_id: selectedService.id,
+            appointment_date: selectedDate,
+            appointment_time: selectedTime,
+            notes
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          alert(errData.detail || "Erro ao efetuar o agendamento.");
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Concluir Agendamento';
+          return;
+        }
+
+        const data = await res.json();
+        document.getElementById('step-3').classList.add('hidden');
+        document.getElementById('step-bar').style.width = '100%';
+        document.getElementById('step-success').classList.remove('hidden');
+
+        const [y, m, d] = data.appointment_date.split('-');
+        document.getElementById('confirmation-details').innerHTML = `
+          <div class="flex justify-between border-b pb-2 text-sm"><span class="text-slate-500">Agendamento:</span> <span class="font-bold text-slate-800">#${data.id}</span></div>
+          <div class="flex justify-between border-b pb-2 text-sm"><span class="text-slate-500">Cliente:</span> <span class="font-semibold text-slate-800">${data.client_name}</span></div>
+          <div class="flex justify-between border-b pb-2 text-sm"><span class="text-slate-500">Procedimento/Pacote:</span> <span class="font-semibold text-rose-600">${data.service_name}</span></div>
+          <div class="flex justify-between border-b pb-2 text-sm"><span class="text-slate-500">Data e Horário:</span> <span class="font-bold text-slate-800">${d}/${m}/${y} às ${data.appointment_time}</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Valor:</span> <span class="font-bold text-slate-800">R$ ${data.price.toFixed(2).replace('.', ',')}</span></div>
+        `;
+
+        const clinicMsg = encodeURIComponent(`Olá! Acabei de agendar ${data.service_name} para o dia ${d}/${m}/${y} às ${data.appointment_time}. Meu nome é ${data.client_name}.`);
+        document.getElementById('btn-whatsapp-confirm').href = `https://wa.me/?text=${clinicMsg}`;
+
+      } catch (err) {
+        alert("Erro na conexão. Verifique se o servidor está ativo.");
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Concluir Agendamento';
+      }
+    });
+
+    async function loadClinicSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+        if (settings.name) {
+          document.title = `Agendamento Online - ${settings.name}`;
+          document.getElementById('clinic-display-name').textContent = settings.name;
+        }
+        if (settings.subtitle) {
+          document.getElementById('clinic-display-subtitle').textContent = settings.subtitle;
+        }
+        if (settings.logo_url) {
+          const img = document.getElementById('clinic-logo-img');
+          const icon = document.getElementById('clinic-logo-icon');
+          img.src = settings.logo_url;
+          img.classList.remove('hidden');
+          icon.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error("Erro ao carregar configurações da clínica", err);
+      }
+    }
+
+    loadClinicSettings();
+    loadServices();
+  </script>
+</body>
+</html>

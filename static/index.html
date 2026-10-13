@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LaserGlow - Sistema de Depilação a Laser</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-xl w-full bg-white/90 backdrop-blur rounded-3xl p-8 border border-white/80 shadow-2xl text-center space-y-6">
+    <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white text-3xl mx-auto shadow-lg shadow-pink-200">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+    </div>
+    
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">LaserGlow Clinic</h1>
+      <p class="text-sm text-slate-500 mt-1">Plataforma de Agendamentos, Gestão e WhatsApp</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+      <a href="/agendar" class="group p-5 rounded-2xl border-2 border-rose-200 hover:border-rose-500 bg-rose-50/50 hover:bg-rose-50 transition text-left flex flex-col justify-between shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center font-bold">
+            <i class="fa-solid fa-calendar-plus"></i>
+          </span>
+          <i class="fa-solid fa-arrow-right text-rose-400 group-hover:translate-x-1 transition"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-800 text-base">Link do Cliente</h3>
+          <p class="text-xs text-slate-500 mt-1">Página pública para o cliente ver horários disponíveis e agendar sozinho.</p>
+        </div>
+      </a>
+
+      <a href="/admin" class="group p-5 rounded-2xl border-2 border-purple-200 hover:border-purple-500 bg-purple-50/50 hover:bg-purple-50 transition text-left flex flex-col justify-between shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <span class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold">
+            <i class="fa-solid fa-headset"></i>
+          </span>
+          <i class="fa-solid fa-arrow-right text-purple-400 group-hover:translate-x-1 transition"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-800 text-base">Painel da Clínica</h3>
+          <p class="text-xs text-slate-500 mt-1">Ver atendimentos, reagendar, base de clientes e envio via WhatsApp Web.</p>
+        </div>
+      </a>
+    </div>
+
+    <div class="border-t border-slate-100 pt-4 text-xs text-slate-400">
+      Sistema pronto para uso local ou hospedagem em servidor/VPS.
+    </div>
+  </div>
+</body>
+</html>
