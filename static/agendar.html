@@ -342,6 +342,19 @@
         const data = await res.json();
         container.innerHTML = '';
         
+        if (data.closed) {
+          container.innerHTML = `
+            <div class="col-span-full py-6 text-center">
+              <div class="w-12 h-12 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-2 text-xl font-bold">
+                <i class="fa-regular fa-calendar-xmark"></i>
+              </div>
+              <p class="text-rose-600 font-semibold text-sm">Clínica fechada neste dia</p>
+              <p class="text-slate-400 text-xs mt-1">Não realizamos atendimentos neste dia da semana. Por favor, selecione outra data no calendário acima.</p>
+            </div>
+          `;
+          return;
+        }
+
         let availableCount = 0;
         data.slots.forEach(slot => {
           const btn = document.createElement('button');
@@ -360,10 +373,10 @@
         });
 
         if (availableCount === 0) {
-          container.innerHTML = '<div class="col-span-full py-4 text-center text-rose-500 font-medium">Todos os horários estão ocupados nesta data. Selecione outro dia por favor.</div>';
+          container.innerHTML = '<div class="col-span-full py-6 text-center text-slate-500 font-medium text-sm"><i class="fa-solid fa-clock-rotate-left mr-1.5 text-rose-500"></i> Todos os horários estão preenchidos para esta data. Selecione outro dia no calendário por favor.</div>';
         }
       } catch (err) {
-        container.innerHTML = '<div class="col-span-full py-4 text-center text-red-500">Erro ao carregar horários.</div>';
+        container.innerHTML = '<div class="col-span-full py-4 text-center text-red-500">Erro ao carregar horários. Tente novamente.</div>';
       }
     }
 

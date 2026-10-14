@@ -215,7 +215,7 @@
         <i class="fa-solid fa-tags"></i> Preços & Procedimentos
       </button>
       <button id="tab-btn-settings" onclick="switchTab('settings')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-sliders"></i> Dados & Logo
+        <i class="fa-solid fa-clock text-rose-500"></i> Horários & Configurações
       </button>
     </div>
 
@@ -551,9 +551,144 @@
       </div>
     </section>
 
-    <!-- SEÇÃO 7: DADOS DA CLÍNICA & LOGOTIPO -->
+    <!-- SEÇÃO 7: HORÁRIOS & DADOS DA CLÍNICA -->
     <section id="section-settings" class="space-y-6 hidden">
-      <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl space-y-6">
+
+      <!-- CARD 1: HORÁRIOS DE ATENDIMENTO & AGENDA -->
+      <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-4xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div>
+            <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-clock text-rose-500 text-xl"></i> Horários de Atendimento & Agenda
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">Configure o horário de início e fim dos atendimentos, a duração dos slots e dias de funcionamento. Os clientes verão esses horários na tela de agendamento.</p>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold border border-rose-100 self-start sm:self-auto">
+            <i class="fa-solid fa-bolt text-rose-500"></i> Atualização em tempo real
+          </span>
+        </div>
+
+        <form id="form-clinic-schedule" onsubmit="saveClinicSettings(event)" class="space-y-6">
+          <!-- Linha 1: Início, Fim e Intervalo -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <i class="fa-regular fa-clock text-rose-500"></i> Início dos Atendimentos *
+              </label>
+              <input type="time" id="setting-opening-time" value="08:00" required oninput="previewGeneratedSlots()" class="w-full px-4 py-2.5 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none text-slate-800">
+              <span class="text-[11px] text-slate-400 mt-1 block">Ex: 08:00 ou 09:00</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <i class="fa-solid fa-flag-checkered text-rose-500"></i> Fim dos Atendimentos *
+              </label>
+              <input type="time" id="setting-closing-time" value="18:00" required oninput="previewGeneratedSlots()" class="w-full px-4 py-2.5 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none text-slate-800">
+              <span class="text-[11px] text-slate-400 mt-1 block">Ex: 18:00, 19:00 ou 20:00</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <i class="fa-solid fa-hourglass-half text-rose-500"></i> Intervalo entre Horários *
+              </label>
+              <select id="setting-slot-interval" onchange="previewGeneratedSlots()" class="w-full px-4 py-2.5 text-sm font-semibold border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none text-slate-800 bg-white">
+                <option value="15">15 minutos</option>
+                <option value="20">20 minutos</option>
+                <option value="30" selected>30 minutos (Padrão Depilação a Laser)</option>
+                <option value="40">40 minutos</option>
+                <option value="45">45 minutos</option>
+                <option value="50">50 minutos</option>
+                <option value="60">60 minutos (1 hora)</option>
+              </select>
+              <span class="text-[11px] text-slate-400 mt-1 block">Duração de cada sessão/slot</span>
+            </div>
+          </div>
+
+          <!-- Linha 2: Intervalo de Almoço / Pausa -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" id="setting-has-lunch" onchange="toggleLunchInputs()" class="w-4 h-4 text-rose-500 rounded border-slate-300 focus:ring-rose-400">
+                <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <i class="fa-solid fa-utensils text-amber-500"></i> Pausar agenda para Almoço / Intervalo
+                </span>
+              </label>
+              <span class="text-[11px] text-slate-400">Bloqueia horários da pausa automaticamente</span>
+            </div>
+
+            <div id="lunch-inputs-row" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 hidden">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Início da Pausa / Almoço</label>
+                <input type="time" id="setting-lunch-start" value="12:00" oninput="previewGeneratedSlots()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Retorno dos Atendimentos</label>
+                <input type="time" id="setting-lunch-end" value="13:00" oninput="previewGeneratedSlots()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-rose-500 focus:outline-none">
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 3: Dias de Funcionamento -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar-week text-rose-500"></i> Dias de Atendimento na Semana
+            </label>
+            <p class="text-[11px] text-slate-500 mb-3">Marque os dias em que a clínica está aberta para agendamentos das clientes:</p>
+            <div class="flex flex-wrap gap-2" id="working-days-container">
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="1" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Segunda-feira</span>
+              </label>
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="2" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Terça-feira</span>
+              </label>
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="3" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Quarta-feira</span>
+              </label>
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="4" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Quinta-feira</span>
+              </label>
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="5" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Sexta-feira</span>
+              </label>
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="6" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Sábado</span>
+              </label>
+              <label class="day-chip cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold select-none transition flex items-center gap-1.5 hover:bg-slate-50">
+                <input type="checkbox" value="0" class="day-checkbox hidden" onchange="updateDayChipVisual(this)">
+                <span>Domingo</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Prévia dos Horários Gerados -->
+          <div class="p-4 rounded-xl bg-rose-50/40 border border-rose-100 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-eye text-rose-500"></i> Prévia em Tempo Real dos Horários para a Cliente:
+              </span>
+              <span id="preview-slot-count" class="text-xs font-semibold text-rose-600 bg-rose-100/70 px-2.5 py-0.5 rounded-full">-- horários</span>
+            </div>
+            <div id="preview-slots-grid" class="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
+              <!-- Preenchido via JavaScript -->
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-sm shadow-md shadow-pink-200 transition flex items-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Salvar Horários & Configurações da Agenda
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- CARD 2: IDENTIDADE VISUAL & DADOS DA CLÍNICA -->
+      <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-4xl space-y-6">
         <div>
           <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
             <i class="fa-solid fa-paintbrush text-rose-500"></i> Identidade Visual & Nome da Clínica
@@ -2296,7 +2431,84 @@
       }
     }
 
-    // 7. CONFIGURAÇÕES & LOGO
+    // 7. CONFIGURAÇÕES & HORÁRIOS DA AGENDA
+    function toggleLunchInputs() {
+      const hasLunch = document.getElementById('setting-has-lunch').checked;
+      const row = document.getElementById('lunch-inputs-row');
+      if (hasLunch) {
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+      previewGeneratedSlots();
+    }
+
+    function updateDayChipVisual(checkbox) {
+      const label = checkbox.closest('.day-chip');
+      if (!label) return;
+      if (checkbox.checked) {
+        label.classList.add('bg-rose-500', 'text-white', 'border-rose-500', 'shadow-xs');
+        label.classList.remove('border-slate-200', 'text-slate-700', 'hover:bg-slate-50');
+      } else {
+        label.classList.remove('bg-rose-500', 'text-white', 'border-rose-500', 'shadow-xs');
+        label.classList.add('border-slate-200', 'text-slate-700', 'hover:bg-slate-50');
+      }
+    }
+
+    function previewGeneratedSlots() {
+      const openTime = document.getElementById('setting-opening-time')?.value || '08:00';
+      const closeTime = document.getElementById('setting-closing-time')?.value || '18:00';
+      const interval = parseInt(document.getElementById('setting-slot-interval')?.value || '30');
+      const hasLunch = document.getElementById('setting-has-lunch')?.checked || false;
+      const lunchStart = document.getElementById('setting-lunch-start')?.value || '12:00';
+      const lunchEnd = document.getElementById('setting-lunch-end')?.value || '13:00';
+
+      const timeToMin = (t) => {
+        const parts = t.split(':').map(Number);
+        return (parts[0] || 0) * 60 + (parts[1] || 0);
+      };
+
+      const startMin = timeToMin(openTime);
+      const endMin = timeToMin(closeTime);
+      const lunchStartMin = hasLunch ? timeToMin(lunchStart) : null;
+      const lunchEndMin = hasLunch ? timeToMin(lunchEnd) : null;
+
+      const slots = [];
+      let curr = startMin;
+      while (curr + interval <= endMin) {
+        const slotEnd = curr + interval;
+        let isLunch = false;
+        if (hasLunch && lunchStartMin !== null && lunchEndMin !== null) {
+          if (!(slotEnd <= lunchStartMin || curr >= lunchEndMin)) {
+            isLunch = true;
+          }
+        }
+        if (!isLunch) {
+          const hh = String(Math.floor(curr / 60)).padStart(2, '0');
+          const mm = String(curr % 60).padStart(2, '0');
+          slots.push(`${hh}:${mm}`);
+        }
+        curr += interval;
+      }
+
+      const grid = document.getElementById('preview-slots-grid');
+      const countEl = document.getElementById('preview-slot-count');
+      if (grid) {
+        if (slots.length === 0) {
+          grid.innerHTML = '<span class="text-xs text-rose-500 font-medium">Nenhum horário gerado com os parâmetros atuais. Ajuste o início e fim.</span>';
+        } else {
+          grid.innerHTML = slots.map(s => `
+            <span class="px-2.5 py-1 bg-white border border-rose-200 text-rose-700 rounded-lg text-xs font-bold shadow-xs">
+              ${s}
+            </span>
+          `).join('');
+        }
+      }
+      if (countEl) {
+        countEl.textContent = `${slots.length} horários por dia aberto`;
+      }
+    }
+
     async function loadClinicSettings() {
       try {
         const res = await fetch('/api/settings');
@@ -2312,6 +2524,29 @@
         const logoUrl = settings.logo_url || '';
         document.getElementById('setting-logo-url').value = logoUrl;
         updateLogoPreviews(logoUrl);
+
+        // Preencher Horários
+        if (document.getElementById('setting-opening-time')) {
+          document.getElementById('setting-opening-time').value = settings.opening_time || '08:00';
+          document.getElementById('setting-closing-time').value = settings.closing_time || '18:00';
+          document.getElementById('setting-slot-interval').value = settings.slot_interval_minutes || 30;
+          document.getElementById('setting-has-lunch').checked = !!settings.has_lunch_break;
+          document.getElementById('setting-lunch-start').value = settings.lunch_start || '12:00';
+          document.getElementById('setting-lunch-end').value = settings.lunch_end || '13:00';
+
+          // Dias de funcionamento
+          let workingDays = ["1", "2", "3", "4", "5", "6"];
+          if (settings.working_days) {
+            try { workingDays = JSON.parse(settings.working_days).map(String); } catch (e) {}
+          }
+          document.querySelectorAll('.day-checkbox').forEach(cb => {
+            cb.checked = workingDays.includes(String(cb.value));
+            updateDayChipVisual(cb);
+          });
+
+          toggleLunchInputs();
+          previewGeneratedSlots();
+        }
       } catch (err) {
         console.error("Erro ao carregar configurações", err);
       }
@@ -2358,13 +2593,25 @@
     }
 
     async function saveClinicSettings(e) {
-      e.preventDefault();
+      if (e) e.preventDefault();
+
+      // Coleta dias marcados
+      const workingDays = [];
+      document.querySelectorAll('.day-checkbox:checked').forEach(cb => workingDays.push(cb.value));
+
       const payload = {
-        name: document.getElementById('setting-name').value.trim(),
-        subtitle: document.getElementById('setting-subtitle').value.trim(),
-        logo_url: document.getElementById('setting-logo-url').value.trim(),
-        phone: document.getElementById('setting-phone').value.trim(),
-        instagram: document.getElementById('setting-instagram').value.trim()
+        name: document.getElementById('setting-name').value.trim() || 'LaserGlow Clinic',
+        subtitle: document.getElementById('setting-subtitle').value.trim() || '',
+        logo_url: document.getElementById('setting-logo-url').value.trim() || '',
+        phone: document.getElementById('setting-phone').value.trim() || '',
+        instagram: document.getElementById('setting-instagram').value.trim() || '',
+        opening_time: document.getElementById('setting-opening-time').value || '08:00',
+        closing_time: document.getElementById('setting-closing-time').value || '18:00',
+        slot_interval_minutes: parseInt(document.getElementById('setting-slot-interval').value) || 30,
+        has_lunch_break: document.getElementById('setting-has-lunch').checked ? 1 : 0,
+        lunch_start: document.getElementById('setting-lunch-start').value || '12:00',
+        lunch_end: document.getElementById('setting-lunch-end').value || '13:00',
+        working_days: JSON.stringify(workingDays)
       };
 
       try {
@@ -2375,7 +2622,10 @@
         });
         if (res.ok) {
           document.getElementById('admin-display-name').textContent = payload.name;
-          alert("Dados da clínica salvos com sucesso!");
+          alert("Horários e configurações da clínica salvos com sucesso!");
+          previewGeneratedSlots();
+        } else {
+          alert("Erro ao salvar configurações.");
         }
       } catch (err) { alert("Erro na conexão."); }
     }
@@ -2403,6 +2653,10 @@
         const res = await fetch(`/api/available-slots?date=${date}`);
         const data = await res.json();
         container.innerHTML = '';
+        if (data.closed) {
+          container.innerHTML = '<span class="col-span-full text-xs text-rose-500 font-semibold py-2">Clínica não atende neste dia da semana. Escolha outra data.</span>';
+          return;
+        }
         data.slots.forEach(slot => {
           const btn = document.createElement('button');
           btn.type = 'button';
