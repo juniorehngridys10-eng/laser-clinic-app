@@ -21,7 +21,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ADMIN_PIN = "1234"  # Senha padrão de acesso ao Painel da Clínica
 
-app = FastAPI(title="Laser Clinic Agendamento & Gestão")
+app = FastAPI(title="Laser Clinic Agendamento & Gestão Completa")
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,7 +40,7 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
 
-    # Tabela de Configurações da Clínica (Nome e Logotipo)
+    # 1. Tabela de Configurações da Clínica
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS clinic_settings (
         id INTEGER PRIMARY KEY,
@@ -59,7 +59,7 @@ def init_db():
         VALUES (1, 'LaserGlow Clinic', 'Depilação a Laser de Alta Tecnologia', '', '11987654321', '@laser.glow')
         """)
 
-    # Tabela de Serviços e Pacotes
+    # 2. Tabela de Serviços e Pacotes da Clínica
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS services (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,16 +78,29 @@ def init_db():
     if "sessions_count" not in cols:
         cursor.execute("ALTER TABLE services ADD COLUMN sessions_count INTEGER DEFAULT 1;")
 
+    # 3. Tabela de Clientes com campos completos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS clients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         phone TEXT NOT NULL UNIQUE,
         email TEXT,
+        cpf TEXT,
+        birth_date TEXT,
+        notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+    cursor.execute("PRAGMA table_info(clients);")
+    client_cols = [c[1] for c in cursor.fetchall()]
+    if "cpf" not in client_cols:
+        cursor.execute("ALTER TABLE clients ADD COLUMN cpf TEXT;")
+    if "birth_date" not in client_cols:
+        cursor.execute("ALTER TABLE clients ADD COLUMN birth_date TEXT;")
+    if "notes" not in client_cols:
+        cursor.execute("ALTER TABLE clients ADD COLUMN notes TEXT;")
 
+    # 4. Tabela de Agendamentos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS appointments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,7 +116,78 @@ def init_db():
     );
     """)
 
-    # Popula procedimentos padrão caso vazio
+    # 5. Tabela de Controle de Pacotes Vendidos aos Clientes (Sessões Restantes)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS client_packages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        service_id INTEGER NOT NULL,
+        total_sessions INTEGER NOT NULL,
+        completed_sessions INTEGER DEFAULT 0,
+        price_paid REAL NOT NULL,
+        payment_method TEXT DEFAULT 'Pix',
+        status TEXT DEFAULT 'ativo',
+        purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT,
+        FOREIGN KEY (client_id) REFERENCES clients (id),
+        FOREIGN KEY (service_id) REFERENCES services (id)
+    );
+    """)
+
+    # 6. Tabela de Fluxo de Caixa (Entradas e Saídas)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cash_flow (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        amount REAL NOT NULL,
+        payment_method TEXT DEFAULT 'Pix',
+        transaction_date TEXT NOT NULL,
+        client_id INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients (id)
+    );
+    """)
+
+    # 7. Tabela de Ficha de Avaliação e Anamnese do Cliente (Luz e Pele)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS anamnese_forms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL UNIQUE,
+        contract_number TEXT,
+        sexo TEXT,
+        endereco TEXT,
+        bairro TEXT,
+        cep TEXT,
+        cidade TEXT,
+        uf TEXT,
+        tel_fixo TEXT,
+        instagram TEXT,
+        profissao TEXT,
+        como_conheceu TEXT,
+        tipo_tratamento TEXT,
+        areas_tratamento TEXT,
+        exposicao_sol_48h TEXT,
+        historico_patologias TEXT,
+        questionario_medico TEXT,
+        reacao_solar TEXT,
+        termo_aceito INTEGER DEFAULT 1,
+        signature_name TEXT,
+        signature_date TEXT,
+        signature_image TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (client_id) REFERENCES clients (id)
+    );
+    """)
+
+    try:
+        cursor.execute("ALTER TABLE anamnese_forms ADD COLUMN signature_image TEXT")
+    except Exception:
+        pass
+
+    # Procedimentos padrão se vazio
     cursor.execute("SELECT COUNT(*) FROM services")
     count = cursor.fetchone()[0]
     if count == 0:
@@ -160,12 +244,85 @@ class ClinicSettingsUpdate(BaseModel):
     phone: Optional[str] = ""
     instagram: Optional[str] = ""
 
+class ClientCreateOrUpdate(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = ""
+    cpf: Optional[str] = ""
+    birth_date: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class AnamneseFormModel(BaseModel):
+    contract_number: Optional[str] = ""
+    sexo: Optional[str] = ""
+    endereco: Optional[str] = ""
+    bairro: Optional[str] = ""
+    cep: Optional[str] = ""
+    cidade: Optional[str] = ""
+    uf: Optional[str] = ""
+    tel_fixo: Optional[str] = ""
+    instagram: Optional[str] = ""
+    profissao: Optional[str] = ""
+    como_conheceu: Optional[str] = ""
+    tipo_tratamento: Optional[str] = "Depilação"
+    areas_tratamento: Optional[str] = "[]"
+    exposicao_sol_48h: Optional[str] = "Não"
+    historico_patologias: Optional[str] = "[]"
+    questionario_medico: Optional[str] = "{}"
+    reacao_solar: Optional[str] = ""
+    signature_name: Optional[str] = ""
+    signature_date: Optional[str] = ""
+    signature_image: Optional[str] = ""
+
+class PublicClientFichaSubmit(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = ""
+    cpf: Optional[str] = ""
+    birth_date: Optional[str] = ""
+    contract_number: Optional[str] = ""
+    sexo: Optional[str] = "F"
+    endereco: Optional[str] = ""
+    bairro: Optional[str] = ""
+    cep: Optional[str] = ""
+    cidade: Optional[str] = ""
+    uf: Optional[str] = ""
+    tel_fixo: Optional[str] = ""
+    instagram: Optional[str] = ""
+    profissao: Optional[str] = ""
+    como_conheceu: Optional[str] = ""
+    tipo_tratamento: Optional[str] = "Depilação"
+    areas_tratamento: Optional[str] = "[]"
+    exposicao_sol_48h: Optional[str] = "Não"
+    historico_patologias: Optional[str] = "[]"
+    questionario_medico: Optional[str] = "{}"
+    reacao_solar: Optional[str] = ""
+    signature_name: Optional[str] = ""
+    signature_date: Optional[str] = ""
+    signature_image: Optional[str] = ""
+
+class SellPackageRequest(BaseModel):
+    client_id: int
+    service_id: int
+    price_paid: float
+    payment_method: str = "Pix"
+    notes: Optional[str] = ""
+
+class CashFlowEntry(BaseModel):
+    type: str  # 'entrada' ou 'saida'
+    category: str
+    description: str
+    amount: float
+    payment_method: str = "Pix"
+    transaction_date: str
+    client_id: Optional[int] = None
+
 def verify_admin(x_admin_pin: Optional[str] = Header(None)):
     if x_admin_pin != ADMIN_PIN:
         raise HTTPException(status_code=401, detail="Acesso não autorizado. Digite o PIN da clínica.")
     return True
 
-# --- Endpoints Públicos (Clientes e Identidade Visual) ---
+# --- Endpoints Públicos (Clientes e Agendamento) ---
 
 @app.get("/api/settings")
 def get_clinic_settings():
@@ -294,7 +451,6 @@ async def upload_logo(file: UploadFile = File(...), _=Depends(verify_admin)):
 
     logo_url = f"/static/uploads/{filename}"
 
-    # Salva no banco de dados automaticamente
     conn = get_db()
     conn.execute("UPDATE clinic_settings SET logo_url = ? WHERE id = 1", (logo_url,))
     conn.commit()
@@ -327,13 +483,20 @@ def list_appointments(date: Optional[str] = None, status: Optional[str] = None, 
     conn.close()
     return [dict(r) for r in rows]
 
+# --- Gestão Completa de Clientes ---
 @app.get("/api/clients")
 def list_clients(_=Depends(verify_admin)):
     conn = get_db()
     query = """
-        SELECT c.id, c.name, c.phone, c.email, c.created_at,
-               COUNT(a.id) as total_appointments,
-               MAX(a.appointment_date) as last_appointment_date
+        SELECT c.*,
+               COUNT(DISTINCT a.id) as total_appointments,
+               MAX(a.appointment_date) as last_appointment_date,
+               COALESCE((
+                   SELECT COUNT(*) FROM client_packages cp WHERE cp.client_id = c.id AND cp.status = 'ativo'
+               ), 0) as active_packages_count,
+               COALESCE((
+                   SELECT SUM(cf.amount) FROM cash_flow cf WHERE cf.client_id = c.id AND cf.type = 'entrada'
+               ), 0) as total_spent
         FROM clients c
         LEFT JOIN appointments a ON c.id = a.client_id
         GROUP BY c.id
@@ -342,6 +505,434 @@ def list_clients(_=Depends(verify_admin)):
     rows = conn.execute(query).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+@app.post("/api/admin/clients")
+def create_client(c: ClientCreateOrUpdate, _=Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+    clean_phone = "".join(filter(str.isdigit, c.phone))
+    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
+        clean_phone = "55" + clean_phone
+
+    existing = cursor.execute("SELECT id FROM clients WHERE phone = ?", (clean_phone,)).fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Já existe um cliente cadastrado com este telefone/WhatsApp.")
+
+    cursor.execute("""
+        INSERT INTO clients (name, phone, email, cpf, birth_date, notes)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (c.name, clean_phone, c.email, c.cpf, c.birth_date, c.notes))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": new_id, "name": c.name}
+
+@app.put("/api/admin/clients/{client_id}")
+def update_client(client_id: int, c: ClientCreateOrUpdate, _=Depends(verify_admin)):
+    conn = get_db()
+    clean_phone = "".join(filter(str.isdigit, c.phone))
+    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
+        clean_phone = "55" + clean_phone
+
+    conn.execute("""
+        UPDATE clients
+        SET name = ?, phone = ?, email = ?, cpf = ?, birth_date = ?, notes = ?
+        WHERE id = ?
+    """, (c.name, clean_phone, c.email, c.cpf, c.birth_date, c.notes, client_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": client_id}
+
+@app.delete("/api/admin/clients/{client_id}")
+def delete_client(client_id: int, _=Depends(verify_admin)):
+    conn = get_db()
+    conn.execute("DELETE FROM appointments WHERE client_id = ?", (client_id,))
+    conn.execute("DELETE FROM client_packages WHERE client_id = ?", (client_id,))
+    conn.execute("DELETE FROM anamnese_forms WHERE client_id = ?", (client_id,))
+    conn.execute("DELETE FROM clients WHERE id = ?", (client_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": client_id}
+
+# --- Ficha de Anamnese / Avaliação de Depilação a Laser (Luz e Pele) ---
+
+@app.get("/api/admin/clients/{client_id}/anamnese")
+def get_client_anamnese(client_id: int, _=Depends(verify_admin)):
+    conn = get_db()
+    client = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
+    form = conn.execute("SELECT * FROM anamnese_forms WHERE client_id = ?", (client_id,)).fetchone()
+    conn.close()
+
+    return {
+        "client": dict(client),
+        "anamnese": dict(form) if form else None
+    }
+
+@app.post("/api/admin/clients/{client_id}/anamnese")
+def save_client_anamnese(client_id: int, form: AnamneseFormModel, _=Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    client = cursor.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+    if not client:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
+    # Atualiza também dados cadastrais básicos no cliente se vierem da ficha
+    if form.instagram:
+        cursor.execute("UPDATE clients SET notes = COALESCE(notes, '') WHERE id = ?", (client_id,))
+
+    existing = cursor.execute("SELECT id FROM anamnese_forms WHERE client_id = ?", (client_id,)).fetchone()
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if existing:
+        cursor.execute("""
+            UPDATE anamnese_forms
+            SET contract_number = ?, sexo = ?, endereco = ?, bairro = ?, cep = ?, cidade = ?, uf = ?,
+                tel_fixo = ?, instagram = ?, profissao = ?, como_conheceu = ?, tipo_tratamento = ?,
+                areas_tratamento = ?, exposicao_sol_48h = ?, historico_patologias = ?,
+                questionario_medico = ?, reacao_solar = ?, signature_name = ?, signature_date = ?,
+                signature_image = COALESCE(NULLIF(?, ''), signature_image),
+                updated_at = ?
+            WHERE client_id = ?
+        """, (
+            form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
+            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
+            form.questionario_medico, form.reacao_solar, form.signature_name, form.signature_date or now_str,
+            form.signature_image or "", now_str, client_id
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO anamnese_forms (
+                client_id, contract_number, sexo, endereco, bairro, cep, cidade, uf,
+                tel_fixo, instagram, profissao, como_conheceu, tipo_tratamento,
+                areas_tratamento, exposicao_sol_48h, historico_patologias,
+                questionario_medico, reacao_solar, signature_name, signature_date,
+                signature_image, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            client_id, form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
+            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
+            form.questionario_medico, form.reacao_solar, form.signature_name, form.signature_date or now_str,
+            form.signature_image or "", now_str, now_str
+        ))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Ficha de Anamnese salva com sucesso!"}
+
+# --- Endpoint Público de Preenchimento e Assinatura de Ficha pelo Cliente ---
+
+@app.post("/api/client/ficha")
+def client_submit_ficha(form: PublicClientFichaSubmit):
+    name = form.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Por favor, preencha o seu nome completo.")
+
+    clean_phone = "".join(filter(str.isdigit, form.phone))
+    if len(clean_phone) < 10:
+        raise HTTPException(status_code=400, detail="WhatsApp/Telefone inválido. Inclua o DDD com 2 dígitos.")
+    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
+        clean_phone = "55" + clean_phone
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # Procura se o cliente já existe por WhatsApp ou cadastra novo
+    client = cursor.execute("SELECT id FROM clients WHERE phone = ?", (clean_phone,)).fetchone()
+    if client:
+        client_id = client["id"]
+        cursor.execute("""
+            UPDATE clients 
+            SET name = ?, 
+                email = CASE WHEN ? != '' THEN ? ELSE email END,
+                cpf = CASE WHEN ? != '' THEN ? ELSE cpf END,
+                birth_date = CASE WHEN ? != '' THEN ? ELSE birth_date END
+            WHERE id = ?
+        """, (name, form.email or "", form.email or "", form.cpf or "", form.cpf or "", form.birth_date or "", form.birth_date or "", client_id))
+    else:
+        cursor.execute("""
+            INSERT INTO clients (name, phone, email, cpf, birth_date)
+            VALUES (?, ?, ?, ?, ?)
+        """, (name, clean_phone, form.email or "", form.cpf or "", form.birth_date or ""))
+        client_id = cursor.lastrowid
+
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    existing_anamnese = cursor.execute("SELECT id FROM anamnese_forms WHERE client_id = ?", (client_id,)).fetchone()
+
+    if existing_anamnese:
+        cursor.execute("""
+            UPDATE anamnese_forms
+            SET contract_number = ?, sexo = ?, endereco = ?, bairro = ?, cep = ?, cidade = ?, uf = ?,
+                tel_fixo = ?, instagram = ?, profissao = ?, como_conheceu = ?, tipo_tratamento = ?,
+                areas_tratamento = ?, exposicao_sol_48h = ?, historico_patologias = ?,
+                questionario_medico = ?, reacao_solar = ?, signature_name = ?, signature_date = ?,
+                signature_image = CASE WHEN ? != '' THEN ? ELSE signature_image END,
+                updated_at = ?
+            WHERE client_id = ?
+        """, (
+            form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
+            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
+            form.questionario_medico, form.reacao_solar, form.signature_name or name,
+            form.signature_date or now_str, form.signature_image or "", form.signature_image or "", now_str, client_id
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO anamnese_forms (
+                client_id, contract_number, sexo, endereco, bairro, cep, cidade, uf,
+                tel_fixo, instagram, profissao, como_conheceu, tipo_tratamento,
+                areas_tratamento, exposicao_sol_48h, historico_patologias,
+                questionario_medico, reacao_solar, signature_name, signature_date,
+                signature_image, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            client_id, form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
+            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
+            form.questionario_medico, form.reacao_solar, form.signature_name or name,
+            form.signature_date or now_str, form.signature_image or "", now_str, now_str
+        ))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "client_id": client_id, "name": name, "message": "Ficha e assinatura digital registradas com sucesso!"}
+
+@app.get("/api/client/ficha")
+def client_get_ficha(phone: Optional[str] = None, client_id: Optional[int] = None):
+    if not phone and not client_id:
+        return {"client": None, "anamnese": None}
+    conn = get_db()
+    client = None
+    if client_id:
+        client = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+    elif phone:
+        clean_phone = "".join(filter(str.isdigit, phone))
+        if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
+            clean_phone = "55" + clean_phone
+        client = conn.execute("SELECT * FROM clients WHERE phone = ? OR phone LIKE ?", (clean_phone, f"%{clean_phone}%")).fetchone()
+
+    if not client:
+        conn.close()
+        return {"client": None, "anamnese": None}
+
+    c_id = client["id"]
+    anamnese = conn.execute("SELECT * FROM anamnese_forms WHERE client_id = ?", (c_id,)).fetchone()
+    conn.close()
+    return {
+        "client": dict(client),
+        "anamnese": dict(anamnese) if anamnese else None
+    }
+
+# --- Controle de Pacotes de Clientes (Sessões Realizadas e Restantes) ---
+
+@app.get("/api/admin/client-packages")
+def list_client_packages(client_id: Optional[int] = None, _=Depends(verify_admin)):
+    conn = get_db()
+    query = """
+        SELECT cp.*, c.name as client_name, c.phone as client_phone, s.name as service_name
+        FROM client_packages cp
+        JOIN clients c ON cp.client_id = c.id
+        JOIN services s ON cp.service_id = s.id
+        WHERE 1=1
+    """
+    params = []
+    if client_id:
+        query += " AND cp.client_id = ?"
+        params.append(client_id)
+    query += " ORDER BY cp.id DESC"
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/admin/client-packages")
+def sell_client_package(req: SellPackageRequest, _=Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    service = cursor.execute("SELECT * FROM services WHERE id = ?", (req.service_id,)).fetchone()
+    if not service:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Pacote/Procedimento não encontrado.")
+
+    total_sessions = service["sessions_count"] or 10
+
+    # Cria o pacote para o cliente
+    cursor.execute("""
+        INSERT INTO client_packages (client_id, service_id, total_sessions, completed_sessions, price_paid, payment_method, status, notes)
+        VALUES (?, ?, ?, 0, ?, ?, 'ativo', ?)
+    """, (req.client_id, req.service_id, total_sessions, req.price_paid, req.payment_method, req.notes))
+    pkg_id = cursor.lastrowid
+
+    # Lança automaticamente no Fluxo de Caixa como entrada
+    client = cursor.execute("SELECT name FROM clients WHERE id = ?", (req.client_id,)).fetchone()
+    client_name = client["name"] if client else "Cliente"
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+
+    cursor.execute("""
+        INSERT INTO cash_flow (type, category, description, amount, payment_method, transaction_date, client_id)
+        VALUES ('entrada', 'Venda de Pacote', ?, ?, ?, ?, ?)
+    """, (f"Pacote {service['name']} - {client_name}", req.price_paid, req.payment_method, today_str, req.client_id))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": pkg_id}
+
+@app.post("/api/admin/client-packages/{pkg_id}/consume-session")
+def consume_package_session(pkg_id: int, _=Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+    pkg = cursor.execute("SELECT * FROM client_packages WHERE id = ?", (pkg_id,)).fetchone()
+    if not pkg:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Pacote não encontrado.")
+
+    completed = pkg["completed_sessions"] + 1
+    total = pkg["total_sessions"]
+    new_status = 'concluido' if completed >= total else 'ativo'
+
+    cursor.execute("""
+        UPDATE client_packages
+        SET completed_sessions = ?, status = ?
+        WHERE id = ?
+    """, (completed, new_status, pkg_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "completed_sessions": completed, "total_sessions": total, "status": new_status}
+
+# --- Fluxo de Caixa (Financeiro) ---
+
+@app.get("/api/admin/cash-flow")
+def list_cash_flow(month: Optional[str] = None, _=Depends(verify_admin)):
+    conn = get_db()
+    query = """
+        SELECT cf.*, c.name as client_name
+        FROM cash_flow cf
+        LEFT JOIN clients c ON cf.client_id = c.id
+        WHERE 1=1
+    """
+    params = []
+    if month:
+        query += " AND cf.transaction_date LIKE ?"
+        params.append(f"{month}%")
+    query += " ORDER BY cf.transaction_date DESC, cf.id DESC"
+    rows = conn.execute(query, params).fetchall()
+
+    # Totais
+    total_entradas = sum(r["amount"] for r in rows if r["type"] == "entrada")
+    total_saidas = sum(r["amount"] for r in rows if r["type"] == "saida")
+    saldo_liquido = total_entradas - total_saidas
+
+    conn.close()
+    return {
+        "transactions": [dict(r) for r in rows],
+        "summary": {
+            "total_entradas": total_entradas,
+            "total_saidas": total_saidas,
+            "saldo_liquido": saldo_liquido
+        }
+    }
+
+@app.post("/api/admin/cash-flow")
+def add_cash_flow_entry(entry: CashFlowEntry, _=Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO cash_flow (type, category, description, amount, payment_method, transaction_date, client_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (entry.type, entry.category, entry.description, entry.amount, entry.payment_method, entry.transaction_date, entry.client_id))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": new_id}
+
+@app.delete("/api/admin/cash-flow/{entry_id}")
+def delete_cash_flow_entry(entry_id: int, _=Depends(verify_admin)):
+    conn = get_db()
+    conn.execute("DELETE FROM cash_flow WHERE id = ?", (entry_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": entry_id}
+
+# --- Inteligência de Clínica: Análise de Clientes, Ticket Médio & Retenção (Evitar Perdas) ---
+
+@app.get("/api/admin/analytics")
+def get_clinic_analytics(_=Depends(verify_admin)):
+    conn = get_db()
+
+    # 1. Total faturado e ticket médio
+    total_revenue_row = conn.execute("SELECT SUM(amount) as total, COUNT(*) as count FROM cash_flow WHERE type = 'entrada'").fetchone()
+    total_revenue = total_revenue_row["total"] or 0
+    total_sales = total_revenue_row["count"] or 0
+
+    # Contagem de clientes únicos compradores
+    buyers_count = conn.execute("SELECT COUNT(DISTINCT client_id) FROM cash_flow WHERE type = 'entrada' AND client_id IS NOT NULL").fetchone()[0] or 1
+    ticket_medio_cliente = round(total_revenue / buyers_count, 2) if buyers_count > 0 else 0
+    ticket_medio_venda = round(total_revenue / total_sales, 2) if total_sales > 0 else 0
+
+    # 2. Taxa de No-Show / Cancelamento
+    total_apps = conn.execute("SELECT COUNT(*) FROM appointments").fetchone()[0] or 1
+    cancelled_apps = conn.execute("SELECT COUNT(*) FROM appointments WHERE status = 'cancelado'").fetchone()[0] or 0
+    no_show_rate = round((cancelled_apps / total_apps) * 100, 1)
+
+    # 3. Pacotes com sessões quase acabando (Oportunidade de Renovação / Upsell)
+    # Ex: Pacotes com 7 ou mais sessões concluídas de 10
+    renewal_opportunities = conn.execute("""
+        SELECT cp.id, cp.completed_sessions, cp.total_sessions, c.id as client_id, c.name, c.phone, s.name as service_name
+        FROM client_packages cp
+        JOIN clients c ON cp.client_id = c.id
+        JOIN services s ON cp.service_id = s.id
+        WHERE cp.status = 'ativo' AND cp.completed_sessions >= (cp.total_sessions - 3)
+    """).fetchall()
+
+    # 4. Clientes em Risco de Perda (Inativos há mais de 30 dias para laser)
+    # Depilação a laser requer sessões a cada 30 a 45 dias. Passou disso, há risco de abandono do tratamento!
+    cutoff_date = (datetime.date.today() - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
+    at_risk_clients = conn.execute("""
+        SELECT c.id, c.name, c.phone, MAX(a.appointment_date) as last_date,
+               CAST((julianday('now') - julianday(MAX(a.appointment_date))) AS INTEGER) as days_inactive
+        FROM clients c
+        JOIN appointments a ON c.id = a.client_id
+        WHERE a.status IN ('concluido', 'agendado', 'confirmado')
+        GROUP BY c.id
+        HAVING MAX(a.appointment_date) < ? AND MAX(a.appointment_date) IS NOT NULL
+        ORDER BY last_date ASC
+    """, (cutoff_date,)).fetchall()
+
+    # 5. Top 5 Procedimentos mais procurados
+    top_services = conn.execute("""
+        SELECT s.name, COUNT(a.id) as total_bookings, SUM(s.price) as generated_revenue
+        FROM appointments a
+        JOIN services s ON a.service_id = s.id
+        GROUP BY s.id
+        ORDER BY total_bookings DESC
+        LIMIT 5
+    """).fetchall()
+
+    conn.close()
+
+    return {
+        "metrics": {
+            "total_revenue": total_revenue,
+            "ticket_medio_cliente": ticket_medio_cliente,
+            "ticket_medio_venda": ticket_medio_venda,
+            "no_show_rate": no_show_rate,
+            "at_risk_count": len(at_risk_clients),
+            "renewal_count": len(renewal_opportunities)
+        },
+        "renewal_opportunities": [dict(r) for r in renewal_opportunities],
+        "at_risk_clients": [dict(r) for r in at_risk_clients],
+        "top_services": [dict(r) for r in top_services]
+    }
+
+# --- Atualização de Status & Reagendamentos ---
 
 @app.put("/api/appointments/{app_id}/status")
 def update_status(app_id: int, req: StatusUpdateRequest, _=Depends(verify_admin)):
@@ -371,7 +962,7 @@ def reschedule_appointment(app_id: int, req: RescheduleRequest, _=Depends(verify
     conn.close()
     return {"success": True, "id": app_id, "appointment_date": req.appointment_date, "appointment_time": req.appointment_time}
 
-# Pacotes e Procedimentos
+# Pacotes do Catálogo
 @app.post("/api/admin/services")
 def create_service(s: ServiceItem, _=Depends(verify_admin)):
     conn = get_db()
@@ -432,6 +1023,15 @@ def admin_panel_page():
     if os.path.exists(admin_file):
         return FileResponse(admin_file)
     raise HTTPException(status_code=404, detail="Página admin.html não encontrada na pasta static.")
+
+@app.get("/ficha")
+@app.get("/anamnese")
+@app.get("/cadastro")
+def client_ficha_page():
+    ficha_file = os.path.join(STATIC_DIR, "ficha.html")
+    if os.path.exists(ficha_file):
+        return FileResponse(ficha_file)
+    raise HTTPException(status_code=404, detail="Página ficha.html não encontrada na pasta static.")
 
 if __name__ == "__main__":
     import uvicorn
