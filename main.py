@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import shutil
+import json
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # Suporte automático a Persistent Disk do Render (/var/data) ou pasta local
@@ -58,6 +59,23 @@ def init_db():
         INSERT INTO clinic_settings (id, name, subtitle, logo_url, phone, instagram)
         VALUES (1, 'LaserGlow Clinic', 'Depilação a Laser de Alta Tecnologia', '', '11987654321', '@laser.glow')
         """)
+
+    cursor.execute("PRAGMA table_info(clinic_settings);")
+    c_settings_cols = [c[1] for c in cursor.fetchall()]
+    if "opening_time" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN opening_time TEXT DEFAULT '08:00';")
+    if "closing_time" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN closing_time TEXT DEFAULT '18:00';")
+    if "slot_interval_minutes" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN slot_interval_minutes INTEGER DEFAULT 30;")
+    if "has_lunch_break" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN has_lunch_break INTEGER DEFAULT 0;")
+    if "lunch_start" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN lunch_start TEXT DEFAULT '12:00';")
+    if "lunch_end" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN lunch_end TEXT DEFAULT '13:00';")
+    if "working_days" not in c_settings_cols:
+        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN working_days TEXT DEFAULT '[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"]';")
 
     # 2. Tabela de Serviços e Pacotes da Clínica
     cursor.execute("""
@@ -243,6 +261,13 @@ class ClinicSettingsUpdate(BaseModel):
     logo_url: Optional[str] = ""
     phone: Optional[str] = ""
     instagram: Optional[str] = ""
+    opening_time: Optional[str] = "08:00"
+    closing_time: Optional[str] = "18:00"
+    slot_interval_minutes: Optional[int] = 30
+    has_lunch_break: Optional[int] = 0
+    lunch_start: Optional[str] = "12:00"
+    lunch_end: Optional[str] = "13:00"
+    working_days: Optional[str] = '["1","2","3","4","5","6"]'
 
 class ClientCreateOrUpdate(BaseModel):
     name: str
@@ -330,13 +355,28 @@ def get_clinic_settings():
     row = conn.execute("SELECT * FROM clinic_settings WHERE id = 1").fetchone()
     conn.close()
     if row:
-        return dict(row)
+        d = dict(row)
+        if not d.get("opening_time"): d["opening_time"] = "08:00"
+        if not d.get("closing_time"): d["closing_time"] = "18:00"
+        if not d.get("slot_interval_minutes"): d["slot_interval_minutes"] = 30
+        if d.get("has_lunch_break") is None: d["has_lunch_break"] = 0
+        if not d.get("lunch_start"): d["lunch_start"] = "12:00"
+        if not d.get("lunch_end"): d["lunch_end"] = "13:00"
+        if not d.get("working_days"): d["working_days"] = '["1","2","3","4","5","6"]'
+        return d
     return {
         "name": "LaserGlow Clinic",
         "subtitle": "Depilação a Laser de Alta Tecnologia",
         "logo_url": "",
         "phone": "",
-        "instagram": ""
+        "instagram": "",
+        "opening_time": "08:00",
+        "closing_time": "18:00",
+        "slot_interval_minutes": 30,
+        "has_lunch_break": 0,
+        "lunch_start": "12:00",
+        "lunch_end": "13:00",
+        "working_days": '["1","2","3","4","5","6"]'
     }
 
 @app.get("/api/services")
@@ -349,6 +389,7 @@ def list_services():
 @app.get("/api/available-slots")
 def get_available_slots(date: str):
     conn = get_db()
+    settings = conn.execute("SELECT * FROM clinic_settings WHERE id = 1").fetchone()
     booked = conn.execute(
         "SELECT appointment_time FROM appointments WHERE appointment_date = ? AND status != 'cancelado'",
         (date,)
@@ -357,24 +398,95 @@ def get_available_slots(date: str):
 
     booked_times = set(r["appointment_time"] for r in booked)
 
+    # Configurações de horários
+    opening_time = (settings["opening_time"] if settings and "opening_time" in settings.keys() and settings["opening_time"] else "08:00")
+    closing_time = (settings["closing_time"] if settings and "closing_time" in settings.keys() and settings["closing_time"] else "18:00")
+    interval = (int(settings["slot_interval_minutes"]) if settings and "slot_interval_minutes" in settings.keys() and settings["slot_interval_minutes"] else 30)
+    has_lunch = bool(settings["has_lunch_break"]) if settings and "has_lunch_break" in settings.keys() else False
+    lunch_s = (settings["lunch_start"] if settings and "lunch_start" in settings.keys() and settings["lunch_start"] else "12:00")
+    lunch_e = (settings["lunch_end"] if settings and "lunch_end" in settings.keys() and settings["lunch_end"] else "13:00")
+    working_days_raw = (settings["working_days"] if settings and "working_days" in settings.keys() and settings["working_days"] else '["1","2","3","4","5","6"]')
+
+    try:
+        working_days = [str(d) for d in json.loads(working_days_raw)]
+    except Exception:
+        working_days = ["1", "2", "3", "4", "5", "6"]
+
+    # Checar se dia da semana está ativo (0=Domingo, 1=Segunda, ..., 6=Sábado)
+    try:
+        dt = datetime.date.fromisoformat(date)
+        weekday_num = str(dt.strftime("%w"))
+        if weekday_num not in working_days:
+            return {
+                "date": date,
+                "closed": True,
+                "message": "A clínica não tem atendimento neste dia da semana.",
+                "slots": []
+            }
+    except Exception:
+        pass
+
+    def time_to_min(t_str):
+        p = t_str.split(":")
+        return int(p[0]) * 60 + int(p[1])
+
+    try:
+        start_min = time_to_min(opening_time)
+        end_min = time_to_min(closing_time)
+        lunch_start_min = time_to_min(lunch_s) if has_lunch else None
+        lunch_end_min = time_to_min(lunch_e) if has_lunch else None
+    except Exception:
+        start_min = 8 * 60
+        end_min = 18 * 60
+        lunch_start_min = None
+        lunch_end_min = None
+
+    if interval <= 0:
+        interval = 30
+
     all_slots = []
-    start_hour = 8
-    end_hour = 18
-    for h in range(start_hour, end_hour):
-        for m in (0, 30):
-            slot = f"{h:02d}:{m:02d}"
-            all_slots.append(slot)
+    curr = start_min
+    while curr + interval <= end_min:
+        slot_start = curr
+        slot_end = curr + interval
+
+        # Pular slots que conflitem com intervalo de almoço
+        is_lunch = False
+        if has_lunch and lunch_start_min is not None and lunch_end_min is not None:
+            if not (slot_end <= lunch_start_min or slot_start >= lunch_end_min):
+                is_lunch = True
+
+        if not is_lunch:
+            h = slot_start // 60
+            m = slot_start % 60
+            all_slots.append(f"{h:02d}:{m:02d}")
+
+        curr += interval
 
     slots_status = [
         {"time": slot, "available": slot not in booked_times}
         for slot in all_slots
     ]
-    return {"date": date, "slots": slots_status}
+    return {"date": date, "closed": False, "slots": slots_status}
 
 @app.post("/api/book")
 def book_appointment(data: BookingRequest):
     conn = get_db()
     cursor = conn.cursor()
+
+    # Verificar dia de funcionamento
+    settings = cursor.execute("SELECT * FROM clinic_settings WHERE id = 1").fetchone()
+    if settings and "working_days" in settings.keys() and settings["working_days"]:
+        try:
+            working_days = [str(d) for d in json.loads(settings["working_days"])]
+            dt = datetime.date.fromisoformat(data.appointment_date)
+            if str(dt.strftime("%w")) not in working_days:
+                conn.close()
+                raise HTTPException(status_code=400, detail="A clínica não possui atendimento na data escolhida.")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
 
     clean_phone = "".join(filter(str.isdigit, data.phone))
     if len(clean_phone) < 10:
@@ -430,12 +542,23 @@ def update_clinic_settings(settings: ClinicSettingsUpdate, _=Depends(verify_admi
     conn = get_db()
     conn.execute("""
         UPDATE clinic_settings
-        SET name = ?, subtitle = ?, logo_url = ?, phone = ?, instagram = ?
+        SET name = ?, subtitle = ?, logo_url = ?, phone = ?, instagram = ?,
+            opening_time = ?, closing_time = ?, slot_interval_minutes = ?,
+            has_lunch_break = ?, lunch_start = ?, lunch_end = ?, working_days = ?
         WHERE id = 1
-    """, (settings.name, settings.subtitle, settings.logo_url, settings.phone, settings.instagram))
+    """, (
+        settings.name, settings.subtitle, settings.logo_url, settings.phone, settings.instagram,
+        settings.opening_time or '08:00',
+        settings.closing_time or '18:00',
+        settings.slot_interval_minutes or 30,
+        settings.has_lunch_break or 0,
+        settings.lunch_start or '12:00',
+        settings.lunch_end or '13:00',
+        settings.working_days or '["1","2","3","4","5","6"]'
+    ))
     conn.commit()
     conn.close()
-    return {"success": True, "message": "Configurações salvas com sucesso!"}
+    return {"success": True, "message": "Configurações e horários salvos com sucesso!"}
 
 @app.post("/api/admin/upload-logo")
 async def upload_logo(file: UploadFile = File(...), _=Depends(verify_admin)):
