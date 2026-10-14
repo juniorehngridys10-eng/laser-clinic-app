@@ -10,9 +10,13 @@ import os
 import shutil
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DB_PATH = os.path.join(BASE_DIR, "clinic.db")
+# Suporte automático a Persistent Disk do Render (/var/data) ou pasta local
+DATA_DIR = os.environ.get("DATA_DIR", "/var/data" if os.path.exists("/var/data") else BASE_DIR)
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DB_PATH = os.path.join(DATA_DIR, "clinic.db")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-UPLOAD_DIR = os.path.join(STATIC_DIR, "uploads")
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads") if os.path.exists("/var/data") else os.path.join(STATIC_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ADMIN_PIN = "1234"  # Senha padrão de acesso ao Painel da Clínica
@@ -404,6 +408,8 @@ def delete_service(service_id: int, _=Depends(verify_admin)):
 
 # Rotas de Arquivos Estáticos com Fallback Seguro
 os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
