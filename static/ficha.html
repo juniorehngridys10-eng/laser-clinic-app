@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ficha Cadastral & Termo de Anamnese - Clínica de Estética & Laser</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .touch-none { touch-action: none; }
+    canvas { touch-action: none; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col selection:bg-rose-500 selection:text-white">
+
+  <!-- Header da Clínica -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div id="clinic-logo-wrapper" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-pink-200 overflow-hidden flex-shrink-0">
+          <i id="clinic-logo-icon" class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+          <img id="clinic-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+        </div>
+        <div>
+          <h1 id="clinic-display-name" class="font-bold text-base text-slate-900 leading-tight">LaserGlow Clinic</h1>
+          <p id="clinic-display-subtitle" class="text-[11px] text-slate-500">Ficha do Cliente & Termo de Consentimento</p>
+        </div>
+      </div>
+      <a id="clinic-whatsapp-link" href="#" target="_blank" class="text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5">
+        <i class="fa-brands fa-whatsapp text-sm"></i> Ajuda
+      </a>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="max-w-3xl mx-auto px-4 py-6 w-full flex-1">
+    
+    <!-- Tela de Sucesso (Inicialmente oculta) -->
+    <div id="success-screen" class="hidden bg-white p-8 rounded-3xl border border-slate-200 shadow-xl text-center space-y-6 my-6">
+      <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-4xl mx-auto shadow-lg shadow-emerald-100 animate-bounce">
+        <i class="fa-solid fa-check"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-extrabold text-slate-900">Ficha Enviada & Assinada!</h2>
+        <p class="text-sm text-slate-600 mt-2 max-w-md mx-auto">
+          Obrigado, <strong id="success-client-name" class="text-rose-600">Cliente</strong>! Seus dados cadastrais, histórico de anamnese e assinatura digital foram registrados com sucesso no sistema da clínica.
+        </p>
+      </div>
+
+      <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs text-slate-600 space-y-2 max-w-md mx-auto">
+        <div class="flex items-center gap-2 font-bold text-slate-800">
+          <i class="fa-solid fa-shield-halved text-rose-500"></i> Segurança & Orientações:
+        </div>
+        <p>• Suas informações médicas são confidenciais e protegidas.</p>
+        <p>• Lembre-se de raspar os pelos com lâmina 1 dia antes da sessão e não tomar sol nas áreas tratadas.</p>
+        <p>• Nossa equipe já tem acesso à sua ficha para o seu atendimento.</p>
+      </div>
+
+      <div class="pt-4 flex flex-col sm:flex-row justify-center gap-3">
+        <a href="/agendar" class="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-sm shadow-md shadow-pink-200 transition flex items-center justify-center gap-2">
+          <i class="fa-regular fa-calendar-check"></i> Agendar ou Ver Horários
+        </a>
+        <a id="success-whatsapp-btn" href="#" target="_blank" class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 transition flex items-center justify-center gap-2">
+          <i class="fa-brands fa-whatsapp text-lg"></i> Falar no WhatsApp
+        </a>
+      </div>
+    </div>
+
+    <!-- Formulário do Cliente -->
+    <form id="form-client-ficha" onsubmit="submitClientFicha(event)" class="space-y-6">
+      
+      <!-- Banner Informativo -->
+      <div class="bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-purple-500/10 border border-rose-200 p-5 rounded-3xl space-y-2">
+        <div class="flex items-center gap-2 text-rose-700 font-bold text-sm">
+          <i class="fa-solid fa-file-signature text-base"></i> Cadastro do Paciente & Avaliação Pré-Laser
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Para sua segurança e melhor eficácia do procedimento, responda com sinceridade ao questionário abaixo. No final da página, você poderá <strong>assinar com o dedo na tela do seu celular</strong>.
+        </p>
+      </div>
+
+      <!-- 1. DADOS PESSOAIS & CADASTRAIS -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+          <i class="fa-regular fa-id-card"></i> 1. Dados Pessoais & Cadastrais
+        </h3>
+
+        <div class="space-y-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo *</label>
+            <input type="text" id="fc-name" required placeholder="Digite seu nome completo" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp / Celular com DDD *</label>
+              <input type="tel" id="fc-phone" required placeholder="(11) 98765-4321" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Data de Nascimento *</label>
+              <input type="date" id="fc-birth" required class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Sexo *</label>
+              <select id="fc-sexo" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+                <option value="F">Feminino</option>
+                <option value="M">Masculino</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">CPF (Opcional)</label>
+              <input type="text" id="fc-cpf" placeholder="000.000.000-00" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Telefone Fixo (Opcional)</label>
+              <input type="text" id="fc-telfixo" placeholder="(11) 3333-0000" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Endereço (Rua e Número) *</label>
+              <input type="text" id="fc-endereco" required placeholder="Ex: Rua das Flores, 123 - Apto 4" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Bairro *</label>
+              <input type="text" id="fc-bairro" required placeholder="Bairro" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">CEP</label>
+              <input type="text" id="fc-cep" placeholder="00000-000" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Cidade *</label>
+              <input type="text" id="fc-cidade" required placeholder="Cidade" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Estado (UF) *</label>
+              <input type="text" id="fc-uf" required placeholder="SP" maxlength="2" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none uppercase">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Instagram (@)</label>
+              <input type="text" id="fc-instagram" placeholder="@seuperfil" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Profissão</label>
+              <input type="text" id="fc-profissao" placeholder="Sua profissão" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Como conheceu a clínica?</label>
+              <select id="fc-conheceu" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+                <option value="Instagram">Instagram</option>
+                <option value="Indicação de Amigo(a)">Indicação de Amigo(a)</option>
+                <option value="Google">Google / Pesquisa</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Passou em frente">Passou em frente</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. TIPO DE TRATAMENTO & ÁREAS A SEREM TRATADAS -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+          <i class="fa-solid fa-bullseye"></i> 2. Tratamento & Áreas Desejadas
+        </h3>
+
+        <!-- Tipo de Tratamento -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-2">Selecione o Tipo de Tratamento:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-rose-50/50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/70 transition">
+              <input type="radio" name="fc-tipo-trat" value="Depilação" checked class="text-rose-600 focus:ring-rose-500 w-4 h-4">
+              <div>
+                <div class="font-bold text-xs text-slate-900">Depilação a Laser</div>
+                <div class="text-[10px] text-slate-500">Eliminação definitiva dos pelos</div>
+              </div>
+            </label>
+            <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-rose-50/50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/70 transition">
+              <input type="radio" name="fc-tipo-trat" value="Fotorrejuvenescimento" class="text-rose-600 focus:ring-rose-500 w-4 h-4">
+              <div>
+                <div class="font-bold text-xs text-slate-900">Fotorrejuvenescimento</div>
+                <div class="text-[10px] text-slate-500">Estímulo de colágeno e firmeza</div>
+              </div>
+            </label>
+            <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-rose-50/50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/70 transition">
+              <input type="radio" name="fc-tipo-trat" value="Pro-Skin" class="text-rose-600 focus:ring-rose-500 w-4 h-4">
+              <div>
+                <div class="font-bold text-xs text-slate-900">Pro-Skin</div>
+                <div class="text-[10px] text-slate-500">Tratamento facial e corporal</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Alerta de 48h sem sol -->
+        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2">
+          <div class="flex items-center gap-2 text-amber-800 font-bold text-xs">
+            <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Atenção à Exposição Solar Recente:
+          </div>
+          <p class="text-xs text-amber-900">Houve exposição direta ao sol nas últimas 48 horas nas áreas que você deseja tratar?</p>
+          <div class="flex gap-4 pt-1 text-xs font-bold">
+            <label class="flex items-center gap-2 cursor-pointer text-rose-700">
+              <input type="radio" name="fc-sol48" value="Sim" class="text-rose-600 w-4 h-4"> SIM (Tomei sol)
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-emerald-700">
+              <input type="radio" name="fc-sol48" value="Não" checked class="text-emerald-600 w-4 h-4"> NÃO (Sem exposição solar)
+            </label>
+          </div>
+        </div>
+
+        <!-- Checklist de Áreas (42 Áreas Anatômicas) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Marque todas as áreas que você deseja tratar:</label>
+          <p class="text-[11px] text-slate-500 mb-3">Toque sobre os procedimentos desejados:</p>
+          <div id="fc-areas-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. HISTÓRICO DE PATOLOGIAS & SAÚDE -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+          <i class="fa-solid fa-heart-pulse"></i> 3. Histórico de Saúde & Patologias
+        </h3>
+        <p class="text-xs text-slate-500">Marque se você possui ou já possuiu alguma das seguintes condições:</p>
+
+        <div id="fc-patologias-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- 4. QUESTIONÁRIO MÉDICO DETALHADO -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+          <i class="fa-solid fa-stethoscope"></i> 4. Questionário Médico & Medicamentos
+        </h3>
+        <div id="fc-perguntas-container" class="divide-y divide-slate-100 space-y-3">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- 5. REAÇÃO AO SOL / FOTOTIPO -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+          <i class="fa-solid fa-sun"></i> 5. Reação da sua Pele ao Sol
+        </h3>
+        <p class="text-xs text-slate-600 font-medium">Como sua pele costuma se comportar ao tomar sol?</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+          <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-slate-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/50 transition">
+            <input type="radio" name="fc-reacao-sol" value="A pele fica bronzeada" class="text-rose-600 w-4 h-4" checked>
+            <span>A pele fica bronzeada facilmente</span>
+          </label>
+          <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-slate-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/50 transition">
+            <input type="radio" name="fc-reacao-sol" value="A pele apresenta vermelhidão" class="text-rose-600 w-4 h-4">
+            <span>Apresenta vermelhidão antes de bronzear</span>
+          </label>
+          <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-slate-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/50 transition">
+            <input type="radio" name="fc-reacao-sol" value="Vermelhidão por mais de 1 dia" class="text-rose-600 w-4 h-4">
+            <span>Vermelhidão perdura por mais de um dia</span>
+          </label>
+          <label class="p-3 border border-slate-200 rounded-2xl flex items-center gap-3 cursor-pointer hover:bg-slate-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/50 transition">
+            <input type="radio" name="fc-reacao-sol" value="Após a vermelhidão fica bronzeada" class="text-rose-600 w-4 h-4">
+            <span>Após a vermelhidão, a pele fica bronzeada</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 6. TERMO DE CONSENTIMENTO & ASSINATURA DIGITAL TOUCHSCREEN -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+          <i class="fa-solid fa-signature"></i> 6. Termo de Consentimento & Assinatura Digital
+        </h3>
+
+        <!-- Texto Legal -->
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 leading-relaxed space-y-2">
+          <p class="font-semibold text-slate-800">Declaração de Veracidade e Consentimento Informado:</p>
+          <p>
+            "Declaro que todas as informações prestadas nesta ficha de avaliação e anamnese são verdadeiras e completas. Fui devidamente orientado(a) sobre o funcionamento da depilação a laser, suas indicações, contraindicações e cuidados necessários antes e após cada sessão (especialmente quanto à proteção solar e métodos de raspagem dos pelos). Comprometo-me a informar à clínica qualquer alteração de saúde, gravidez ou uso de novos medicamentos antes das próximas sessões."
+          </p>
+        </div>
+
+        <!-- Canvas de Assinatura Digital -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <i class="fa-solid fa-pen-nib text-rose-500"></i> Assine com o dedo ou mouse no quadro abaixo: *
+            </label>
+            <button type="button" onclick="clearSignaturePad()" class="text-xs text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1 hover:underline">
+              <i class="fa-solid fa-rotate-left"></i> Limpar / Refazer
+            </button>
+          </div>
+
+          <div class="relative border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden bg-slate-50/50 shadow-inner">
+            <canvas id="signature-pad" width="600" height="180" class="w-full h-40 bg-white cursor-crosshair block touch-none"></canvas>
+            <div id="signature-placeholder" class="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-medium gap-2">
+              <i class="fa-solid fa-hand-pointer text-slate-300 text-lg"></i> Toque e assine aqui com o dedo
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 text-right">Sua assinatura será registrada digitalmente com carimbo de data e hora.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo do Assinante *</label>
+            <input type="text" id="fc-sign-name" required placeholder="Digite seu nome completo para confirmação" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none font-semibold text-slate-900">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Data da Assinatura</label>
+            <input type="text" id="fc-sign-date" readonly class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-100 font-mono text-slate-600">
+          </div>
+        </div>
+
+        <!-- Botão de Envio -->
+        <div class="pt-4 border-t border-slate-100">
+          <button type="submit" id="btn-submit-ficha" class="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold text-base shadow-xl shadow-pink-200 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada
+          </button>
+        </div>
+
+      </div>
+
+    </form>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+    <p>© <span id="footer-year"></span> <span id="footer-clinic-name">LaserGlow Clinic</span>. Todos os direitos reservados.</p>
+    <p class="text-[10px] text-slate-400 mt-1">Ambiente seguro com assinatura digital criptografada.</p>
+  </footer>
+
+  <script>
+    const AREAS_TRATAMENTO = [
+      "Abdômen", "Antebraço", "Aréolas / Seios", "Axilas", "Barba",
+      "Braço Inteiro", "Buço", "Costas Inteira", "Costelas", "Costeletas",
+      "Coxas", "Dedos da Mão", "Dedos do Pé", "Entre Sobrancelhas", "Faixa de Barba",
+      "Glabela", "Glúteos / Nádegas", "Interglúteo / Ânus", "Linha Alba", "Lombar",
+      "Mãos", "Maxilar", "Meia Costas", "Meia Perna", "Mentô / Queixo",
+      "Nariz", "Nuca", "Ombros", "Orelhas", "Peito / Peitoral",
+      "Pernas Inteiras", "Pés", "Pescoço", "Queixo", "Rosto Inteiro",
+      "Tórax", "Tragús", "Virilha Biquíni", "Virilha Cavada", "Virilha Completa",
+      "Virilha Simples", "Outra Área"
+    ];
+
+    const PATOLOGIAS = [
+      "Diabetes", "Marcapasso", "Epilepsia", "Queloide", "Gestante",
+      "Lactante", "Prótese Metálica", "Tatuagem no Local", "Câncer / Tumores", "Dermatite",
+      "Psoríase", "Vitiligo", "Lúpus", "Herpes Ativa", "Uso de Roacutan",
+      "Problemas Cardíacos", "Problemas Renais", "Hepatite", "Alterações Hormonais", "Hipertensão",
+      "Manchas / Melasma", "Uso de Marcapasso", "Hemofilia", "Implantes no local", "Problemas de Circulação",
+      "Alergia a Cosméticos"
+    ];
+
+    const PERGUNTAS = [
+      "Está fazendo uso de algum medicamento contínuo?",
+      "Fez uso de Roacutan (Isotretinoína) nos últimos 6 meses?",
+      "Utilizou ácidos ou fez peeling químico recentemente na área?",
+      "Possui algum tipo de alergia a remédios, cosméticos ou substâncias?",
+      "Realizou depilação com cera, pinça ou linha nos últimos 20 dias?",
+      "Possui tatuagem ou maquiagem definitiva na região a ser tratada?",
+      "Está gestante, amamentando ou com suspeita de gravidez?",
+      "Costuma apresentar cicatrizes hipertróficas ou queloides?",
+      "Possui histórico de convulsões ou epilepsia induzida por luz?",
+      "Já realizou depilação a laser anteriormente nesta região?",
+      "Apresenta histórico de manchas escuras (hipercromia) após inflamação?",
+      "Está realizando algum outro procedimento estético no local?",
+      "Possui próteses de silicone ou implantes metálicos na área tratada?",
+      "Apresenta infecções bacterianas ou fúngicas ativas na pele?",
+      "Tem histórico de herpes labial ou genital na região do tratamento?",
+      "Fez bronzeamento artificial ou uso de autobronzeador recente?"
+    ];
+
+    // Canvas de Assinatura
+    const canvas = document.getElementById('signature-pad');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let hasSignature = false;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      canvas.width = rect.width * scale;
+      canvas.height = rect.height * scale;
+      ctx.scale(scale, scale);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#0f172a';
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      let clientX, clientY;
+      if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      hasSignature = true;
+      document.getElementById('signature-placeholder').classList.add('hidden');
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      e.preventDefault();
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getPos(e);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      e.preventDefault();
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    function clearSignaturePad() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasSignature = false;
+      document.getElementById('signature-placeholder').classList.remove('hidden');
+    }
+
+    // Eventos do Canvas Touch & Mouse
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDrawing);
+
+    canvas.addEventListener('touchstart', startDrawing, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    window.addEventListener('touchend', stopDrawing);
+
+    // Inicialização da Página
+    window.addEventListener('load', () => {
+      document.getElementById('footer-year').textContent = new Date().getFullYear();
+      
+      const now = new Date();
+      const d = String(now.getDate()).padStart(2, '0');
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const y = now.getFullYear();
+      document.getElementById('fc-sign-date').value = `${d}/${m}/${y}`;
+
+      buildAreasGrid();
+      buildPatologiasGrid();
+      buildPerguntasContainer();
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      loadClinicSettings();
+      checkUrlParams();
+    });
+
+    function buildAreasGrid() {
+      const container = document.getElementById('fc-areas-grid');
+      container.innerHTML = AREAS_TRATAMENTO.map(area => `
+        <label class="p-2.5 border border-slate-200 rounded-xl flex items-center gap-2 cursor-pointer hover:bg-rose-50/50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/80 transition">
+          <input type="checkbox" name="fc-area" value="${area}" class="text-rose-600 rounded focus:ring-rose-500 w-3.5 h-3.5">
+          <span class="text-[11px] font-medium text-slate-800 leading-tight">${area}</span>
+        </label>
+      `).join('');
+    }
+
+    function buildPatologiasGrid() {
+      const container = document.getElementById('fc-patologias-grid');
+      container.innerHTML = PATOLOGIAS.map(pat => `
+        <label class="p-2.5 border border-slate-200 rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50/70 transition">
+          <input type="checkbox" name="fc-patologia" value="${pat}" class="text-rose-600 rounded focus:ring-rose-500 w-3.5 h-3.5">
+          <span class="text-[11px] font-medium text-slate-800">${pat}</span>
+        </label>
+      `).join('');
+    }
+
+    function buildPerguntasContainer() {
+      const container = document.getElementById('fc-perguntas-container');
+      container.innerHTML = PERGUNTAS.map((perg, idx) => `
+        <div class="pt-3 pb-2 text-xs">
+          <p class="font-semibold text-slate-800 mb-2">${idx + 1}. ${perg}</p>
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="flex items-center gap-1.5 cursor-pointer font-bold text-rose-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-rose-50 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50 transition">
+              <input type="radio" name="fc-perg-${idx}" value="Sim" onchange="toggleFichaEspec(${idx}, true)" class="text-rose-600 w-3.5 h-3.5"> SIM
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer font-bold text-emerald-600 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition">
+              <input type="radio" name="fc-perg-${idx}" value="Não" checked onchange="toggleFichaEspec(${idx}, false)" class="text-emerald-600 w-3.5 h-3.5"> NÃO
+            </label>
+            <input type="text" id="fc-espec-${idx}" placeholder="Se sim, por favor especifique..." class="hidden text-xs px-3 py-1.5 border border-slate-300 rounded-xl w-full sm:w-72 focus:ring-rose-500 focus:outline-none">
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleFichaEspec(idx, show) {
+      const input = document.getElementById(`fc-espec-${idx}`);
+      if (input) {
+        if (show) input.classList.remove('hidden');
+        else { input.classList.add('hidden'); input.value = ''; }
+      }
+    }
+
+    async function loadClinicSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        if (data.name) {
+          document.getElementById('clinic-display-name').textContent = data.name;
+          document.getElementById('footer-clinic-name').textContent = data.name;
+          document.title = `Ficha Cadastral & Anamnese - ${data.name}`;
+        }
+        if (data.subtitle) {
+          document.getElementById('clinic-display-subtitle').textContent = data.subtitle;
+        }
+        if (data.logo_url) {
+          const img = document.getElementById('clinic-logo-img');
+          img.src = data.logo_url;
+          img.classList.remove('hidden');
+          document.getElementById('clinic-logo-icon').classList.add('hidden');
+        }
+        if (data.phone) {
+          let clean = data.phone.replace(/\D/g, '');
+          if (!clean.startsWith('55') && clean.length <= 11) clean = '55' + clean;
+          const msg = encodeURIComponent("Olá! Estou preenchendo a ficha cadastral e gostaria de tirar uma dúvida.");
+          document.getElementById('clinic-whatsapp-link').href = `https://wa.me/${clean}?text=${msg}`;
+          document.getElementById('success-whatsapp-btn').href = `https://wa.me/${clean}`;
+        }
+      } catch (err) {
+        console.error("Erro ao carregar dados da clínica", err);
+      }
+    }
+
+    function checkUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      const phoneParam = params.get('phone') || params.get('tel');
+      const nameParam = params.get('name') || params.get('nome');
+
+      if (nameParam) {
+        document.getElementById('fc-name').value = nameParam;
+        document.getElementById('fc-sign-name').value = nameParam;
+      }
+      if (phoneParam) {
+        document.getElementById('fc-phone').value = phoneParam;
+        fetchExistingFicha(phoneParam);
+      }
+
+      // Auto-preenche nome para assinatura ao digitar nome
+      document.getElementById('fc-name').addEventListener('input', (e) => {
+        if (!document.getElementById('fc-sign-name').value || document.getElementById('fc-sign-name').value.startsWith(e.target.value.substring(0, 3))) {
+          document.getElementById('fc-sign-name').value = e.target.value;
+        }
+      });
+    }
+
+    async function fetchExistingFicha(phone) {
+      try {
+        const res = await fetch(`/api/client/ficha?phone=${phone}`);
+        const data = await res.json();
+        if (data.client) {
+          const c = data.client;
+          document.getElementById('fc-name').value = c.name || "";
+          document.getElementById('fc-sign-name').value = c.name || "";
+          if (c.cpf) document.getElementById('fc-cpf').value = c.cpf;
+          if (c.birth_date) document.getElementById('fc-birth').value = c.birth_date;
+        }
+        if (data.anamnese) {
+          const a = data.anamnese;
+          if (a.sexo) document.getElementById('fc-sexo').value = a.sexo;
+          if (a.endereco) document.getElementById('fc-endereco').value = a.endereco;
+          if (a.bairro) document.getElementById('fc-bairro').value = a.bairro;
+          if (a.cep) document.getElementById('fc-cep').value = a.cep;
+          if (a.cidade) document.getElementById('fc-cidade').value = a.cidade;
+          if (a.uf) document.getElementById('fc-uf').value = a.uf;
+          if (a.tel_fixo) document.getElementById('fc-telfixo').value = a.tel_fixo;
+          if (a.instagram) document.getElementById('fc-instagram').value = a.instagram;
+          if (a.profissao) document.getElementById('fc-profissao').value = a.profissao;
+          if (a.como_conheceu) document.getElementById('fc-conheceu').value = a.como_conheceu;
+          
+          if (a.tipo_tratamento) {
+            const rad = document.querySelector(`input[name="fc-tipo-trat"][value="${a.tipo_tratamento}"]`);
+            if (rad) rad.checked = true;
+          }
+          if (a.exposicao_sol_48h) {
+            const sRad = document.querySelector(`input[name="fc-sol48"][value="${a.exposicao_sol_48h}"]`);
+            if (sRad) sRad.checked = true;
+          }
+        }
+      } catch (err) {}
+    }
+
+    async function submitClientFicha(e) {
+      e.preventDefault();
+
+      if (!hasSignature) {
+        alert("Por favor, faça sua assinatura digital no quadro antes de enviar!");
+        canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      const btn = document.getElementById('btn-submit-ficha');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Enviando e Registrando Ficha...`;
+
+      // Captura assinatura em formato DataURL
+      const signatureDataUrl = canvas.toDataURL('image/png');
+
+      // Áreas selecionadas
+      const selectedAreas = Array.from(document.querySelectorAll('input[name="fc-area"]:checked')).map(cb => cb.value);
+
+      // Patologias selecionadas
+      const selectedPat = Array.from(document.querySelectorAll('input[name="fc-patologia"]:checked')).map(cb => cb.value);
+
+      // Questionário Médico
+      const questionario = {};
+      PERGUNTAS.forEach((perg, idx) => {
+        const respRadio = document.querySelector(`input[name="fc-perg-${idx}"]:checked`);
+        const resp = respRadio ? respRadio.value : "Não";
+        const espec = document.getElementById(`fc-espec-${idx}`) ? document.getElementById(`fc-espec-${idx}`).value.trim() : "";
+        questionario[perg] = { resposta: resp, especifique: espec };
+      });
+
+      const tipoTrat = document.querySelector('input[name="fc-tipo-trat"]:checked')?.value || "Depilação";
+      const sol48 = document.querySelector('input[name="fc-sol48"]:checked')?.value || "Não";
+      const reacaoSol = document.querySelector('input[name="fc-reacao-sol"]:checked')?.value || "";
+
+      const payload = {
+        name: document.getElementById('fc-name').value.trim(),
+        phone: document.getElementById('fc-phone').value.trim(),
+        birth_date: document.getElementById('fc-birth').value,
+        sexo: document.getElementById('fc-sexo').value,
+        cpf: document.getElementById('fc-cpf').value.trim(),
+        tel_fixo: document.getElementById('fc-telfixo').value.trim(),
+        endereco: document.getElementById('fc-endereco').value.trim(),
+        bairro: document.getElementById('fc-bairro').value.trim(),
+        cep: document.getElementById('fc-cep').value.trim(),
+        cidade: document.getElementById('fc-cidade').value.trim(),
+        uf: document.getElementById('fc-uf').value.trim(),
+        instagram: document.getElementById('fc-instagram').value.trim(),
+        profissao: document.getElementById('fc-profissao').value.trim(),
+        como_conheceu: document.getElementById('fc-conheceu').value,
+        tipo_tratamento: tipoTrat,
+        areas_tratamento: JSON.stringify(selectedAreas),
+        exposicao_sol_48h: sol48,
+        historico_patologias: JSON.stringify(selectedPat),
+        questionario_medico: JSON.stringify(questionario),
+        reacao_solar: reacaoSol,
+        signature_name: document.getElementById('fc-sign-name').value.trim(),
+        signature_date: document.getElementById('fc-sign-date').value,
+        signature_image: signatureDataUrl
+      };
+
+      try {
+        const res = await fetch('/api/client/ficha', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || "Erro ao salvar ficha. Por favor, verifique os campos.");
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada`;
+          return;
+        }
+
+        const data = await res.json();
+
+        // Exibe tela de sucesso
+        document.getElementById('form-client-ficha').classList.add('hidden');
+        document.getElementById('success-client-name').textContent = data.name;
+        document.getElementById('success-screen').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      } catch (err) {
+        alert("Erro na conexão com o servidor. Tente novamente.");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -31,9 +31,14 @@
           <p id="clinic-display-subtitle" class="text-xs text-slate-500 font-medium">Depilação a Laser de Alta Tecnologia</p>
         </div>
       </div>
-      <div class="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        Agenda Aberta em Tempo Real
+      <div class="flex items-center gap-2">
+        <a href="/ficha" class="text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-file-signature text-rose-500"></i> Preencher Ficha & Assinar
+        </a>
+        <div class="hidden sm:flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Agenda Aberta
+        </div>
       </div>
     </div>
   </header>
@@ -203,7 +208,20 @@
           <!-- Populated by JS -->
         </div>
 
-        <div class="pt-4 flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <!-- Chamada para Preencher a Ficha Cadastral e Assinar -->
+        <div class="bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 rounded-2xl p-5 max-w-md mx-auto text-left space-y-3">
+          <div class="flex items-center gap-2 font-bold text-rose-700 text-sm">
+            <i class="fa-solid fa-file-signature text-base"></i> Adiantar seu Atendimento na Clínica:
+          </div>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Para economizar seu tempo na recepção, preencha agora sua <strong>Ficha Cadastral e assine o termo de avaliação com o dedo na tela</strong>:
+          </p>
+          <a id="btn-preencher-ficha" href="/ficha" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-xs shadow-md shadow-pink-200 flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-pen-nib"></i> Preencher Ficha & Assinar Digitalmente
+          </a>
+        </div>
+
+        <div class="pt-2 flex flex-col sm:flex-row gap-3 justify-center items-center">
           <a id="btn-whatsapp-confirm" target="_blank" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-md shadow-emerald-200 flex items-center justify-center gap-2 transition">
             <i class="fa-brands fa-whatsapp text-lg"></i> Abrir WhatsApp da Clínica
           </a>
@@ -481,6 +499,9 @@
 
         const clinicMsg = encodeURIComponent(`Olá! Acabei de agendar ${data.service_name} para o dia ${d}/${m}/${y} às ${data.appointment_time}. Meu nome é ${data.client_name}.`);
         document.getElementById('btn-whatsapp-confirm').href = `https://wa.me/?text=${clinicMsg}`;
+
+        const fichaLink = `/ficha?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(data.client_name)}`;
+        document.getElementById('btn-preencher-ficha').href = fichaLink;
 
       } catch (err) {
         alert("Erro na conexão. Verifique se o servidor está ativo.");

@@ -3,21 +3,94 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel da Clínica - Depilação a Laser</title>
+  <title>Painel da Clínica - Gestão Completa & Inteligência</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .badge-agendado { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
     .badge-confirmado { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .badge-cancelado { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
     .badge-concluido { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+    .badge-ativo { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+
+    @media print {
+      body {
+        background-color: white !important;
+        color: #0f172a !important;
+      }
+      /* Hide regular page elements */
+      header, #login-screen, #nav-tabs-wrapper, .no-print, .modal-backdrop {
+        display: none !important;
+      }
+      
+      /* Print Report mode */
+      body.printing-report-mode #printable-report-paper,
+      body.printing-report-mode #printable-report-paper * {
+        visibility: visible !important;
+      }
+      body.printing-report-mode main > section:not(#section-reports) {
+        display: none !important;
+      }
+      body.printing-report-mode #section-reports {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      body.printing-report-mode #report-controls-panel {
+        display: none !important;
+      }
+      body.printing-report-mode #printable-report-paper {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+      }
+
+      /* Print Anamnese mode */
+      body.printing-anamnese-mode main,
+      body.printing-anamnese-mode header {
+        display: none !important;
+      }
+      body.printing-anamnese-mode #modal-anamnese {
+        display: block !important;
+        position: static !important;
+        inset: auto !important;
+        padding: 0 !important;
+        background: white !important;
+      }
+      body.printing-anamnese-mode #modal-anamnese > div {
+        max-width: 100% !important;
+        height: auto !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      body.printing-anamnese-mode .no-print {
+        display: none !important;
+      }
+
+      @page {
+        margin: 12mm 15mm;
+        size: A4 portrait;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      thead {
+        display: table-header-group;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col">
 
-  <!-- TELA DE BLOQUEIO / LOGIN COM PIN (IMPEDE CLIENTES DE VER O PAINEL) -->
+  <!-- TELA DE BLOQUEIO / LOGIN COM PIN -->
   <div id="login-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-8 shadow-2xl border border-slate-100 text-center space-y-5">
       <div class="w-16 h-16 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-rose-200">
@@ -25,7 +98,7 @@
       </div>
       <div>
         <h2 class="text-xl font-bold text-slate-900">Acesso Restrito</h2>
-        <p class="text-xs text-slate-500 mt-1">Digite a senha PIN da clínica para acessar o painel de atendimentos e clientes.</p>
+        <p class="text-xs text-slate-500 mt-1">Digite o PIN da clínica para acessar a gestão, clientes e financeiro.</p>
       </div>
 
       <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
@@ -52,7 +125,7 @@
         </div>
         <div>
           <span id="admin-display-name" class="font-bold text-lg text-slate-900 tracking-tight">LaserGlow Clinic</span>
-          <span class="text-xs bg-rose-100 text-rose-700 font-semibold px-2 py-0.5 rounded-full ml-2">Painel de Atendimento</span>
+          <span class="text-xs bg-rose-100 text-rose-700 font-semibold px-2 py-0.5 rounded-full ml-2">Painel de Gestão</span>
         </div>
       </div>
 
@@ -68,64 +141,81 @@
   </header>
 
   <!-- Main Content Layout -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full space-y-6">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
-    <!-- KPI Cards & Quick Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl">
-          <i class="fa-regular fa-calendar-check"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-medium">Atendimentos Cadastrados</p>
-          <h3 id="stat-total-apps" class="text-2xl font-bold text-slate-800">--</h3>
-        </div>
+    <!-- KPI Cards de Alta Inteligência da Clínica -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-money-bill-trend-up text-emerald-500"></i> Faturamento Total
+        </p>
+        <h3 id="stat-total-revenue" class="text-lg sm:text-xl font-extrabold text-emerald-600 mt-1">R$ --</h3>
       </div>
 
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-xl">
-          <i class="fa-regular fa-clock"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-medium">Aguardando Confirmação</p>
-          <h3 id="stat-pending-apps" class="text-2xl font-bold text-slate-800">--</h3>
-        </div>
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-receipt text-indigo-500"></i> Ticket Médio / Cliente
+        </p>
+        <h3 id="stat-ticket-medio" class="text-lg sm:text-xl font-extrabold text-indigo-600 mt-1">R$ --</h3>
       </div>
 
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-check-double"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-medium">Confirmados</p>
-          <h3 id="stat-confirmed-apps" class="text-2xl font-bold text-slate-800">--</h3>
-        </div>
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> Clientes em Risco
+        </p>
+        <h3 id="stat-at-risk" class="text-lg sm:text-xl font-extrabold text-rose-600 mt-1">--</h3>
+        <span class="text-[10px] text-slate-400">> 30 dias sem sessão</span>
       </div>
 
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-xl">
-          <i class="fa-solid fa-users"></i>
-        </div>
-        <div>
-          <p class="text-xs text-slate-500 font-medium">Clientes na Base</p>
-          <h3 id="stat-total-clients" class="text-2xl font-bold text-slate-800">--</h3>
-        </div>
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-arrows-rotate text-amber-500"></i> Oportunidade Renovação
+        </p>
+        <h3 id="stat-renewal-opps" class="text-lg sm:text-xl font-extrabold text-amber-600 mt-1">--</h3>
+        <span class="text-[10px] text-slate-400">Pacotes quase no fim</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-ban text-red-500"></i> Taxa No-Show
+        </p>
+        <h3 id="stat-noshow-rate" class="text-lg sm:text-xl font-extrabold text-slate-800 mt-1">--%</h3>
+        <span class="text-[10px] text-slate-400">Faltas / Cancelados</span>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-users text-purple-500"></i> Total Clientes
+        </p>
+        <h3 id="stat-total-clients" class="text-lg sm:text-xl font-extrabold text-purple-600 mt-1">--</h3>
       </div>
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="flex border-b border-slate-200 overflow-x-auto">
-      <button id="tab-btn-appointments" onclick="switchTab('appointments')" class="px-5 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-regular fa-calendar-days"></i> Atendimentos & Agendamentos
+    <div id="nav-tabs-wrapper" class="flex border-b border-slate-200 overflow-x-auto space-x-1 no-print">
+      <button id="tab-btn-appointments" onclick="switchTab('appointments')" class="px-4 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-regular fa-calendar-days"></i> Atendimentos
       </button>
-      <button id="tab-btn-clients" onclick="switchTab('clients')" class="px-5 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-address-book"></i> Lista Geral de Clientes (WhatsApp Web)
+      <button id="tab-btn-clients" onclick="switchTab('clients')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-user-plus"></i> Cadastro de Clientes
       </button>
-      <button id="tab-btn-packages" onclick="switchTab('packages')" class="px-5 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-boxes-stacked"></i> Configurar Pacotes & Procedimentos
+      <button id="tab-btn-packages-control" onclick="switchTab('packages-control')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-clipboard-check"></i> Controle de Pacotes (Sessões)
       </button>
-      <button id="tab-btn-settings" onclick="switchTab('settings')" class="px-5 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-sliders"></i> Dados da Clínica & Logotipo
+      <button id="tab-btn-cashflow" onclick="switchTab('cashflow')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-wallet"></i> Fluxo de Caixa
+      </button>
+      <button id="tab-btn-analytics" onclick="switchTab('analytics')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-chart-line"></i> Análise Anti-Perda (Retenção)
+      </button>
+      <button id="tab-btn-reports" onclick="switchTab('reports')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-print text-indigo-500"></i> Relatórios & Impressão
+      </button>
+      <button id="tab-btn-packages" onclick="switchTab('packages')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-tags"></i> Preços & Procedimentos
+      </button>
+      <button id="tab-btn-settings" onclick="switchTab('settings')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
+        <i class="fa-solid fa-sliders"></i> Dados & Logo
       </button>
     </div>
 
@@ -152,9 +242,14 @@
           <button onclick="clearFilters()" class="text-xs text-rose-600 hover:underline font-medium">Limpar Filtros</button>
         </div>
 
-        <button onclick="loadAppointments()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-medium transition flex items-center gap-1.5 self-start md:self-auto">
-          <i class="fa-solid fa-rotate"></i> Atualizar Lista
-        </button>
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <button onclick="quickPrintReport('appointments')" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl font-semibold transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Imprimir Agenda
+          </button>
+          <button onclick="loadAppointments()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-medium transition flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate"></i> Atualizar Lista
+          </button>
+        </div>
       </div>
 
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -182,18 +277,23 @@
       </div>
     </section>
 
-    <!-- SEÇÃO 2: CLIENTES -->
+    <!-- SEÇÃO 2: CADASTRO COMPLETO DE CLIENTES -->
     <section id="section-clients" class="space-y-4 hidden">
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex-1 max-w-md">
           <div class="relative">
             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-            <input type="text" id="search-client" onkeyup="filterClientTable()" placeholder="Buscar cliente por nome ou WhatsApp..." class="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+            <input type="text" id="search-client" onkeyup="filterClientTable()" placeholder="Buscar cliente por nome, telefone ou CPF..." class="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
           </div>
         </div>
-        <p class="text-xs text-slate-500">
-          <i class="fa-brands fa-whatsapp text-emerald-500 text-sm mr-1"></i> Inicie conversas e acompanhe cada cliente em 1 clique.
-        </p>
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <button onclick="quickPrintReport('clients')" class="px-3.5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Imprimir Lista
+          </button>
+          <button onclick="openNewClientModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold text-sm shadow-md shadow-pink-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-user-plus"></i> Novo Cadastro de Cliente
+          </button>
+        </div>
       </div>
 
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -201,11 +301,12 @@
           <table class="w-full text-left text-sm">
             <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
               <tr>
-                <th class="py-3.5 px-4">Nome do Cliente</th>
-                <th class="py-3.5 px-4">Telefone / WhatsApp</th>
-                <th class="py-3.5 px-4">Total de Sessões</th>
-                <th class="py-3.5 px-4">Última Visita</th>
-                <th class="py-3.5 px-4 text-center">Chamar no WhatsApp Web</th>
+                <th class="py-3.5 px-4">Nome & Ficha</th>
+                <th class="py-3.5 px-4">WhatsApp / CPF</th>
+                <th class="py-3.5 px-4">Pacotes Ativos</th>
+                <th class="py-3.5 px-4">Total Gasto</th>
+                <th class="py-3.5 px-4">Última Sessão</th>
+                <th class="py-3.5 px-4 text-center">Ações</th>
               </tr>
             </thead>
             <tbody id="clients-tbody" class="divide-y divide-slate-100 text-slate-700">
@@ -216,7 +317,174 @@
       </div>
     </section>
 
-    <!-- SEÇÃO 3: CONFIGURAR PACOTES E PROCEDIMENTOS -->
+    <!-- SEÇÃO 3: CONTROLE DE PACOTES DE CLIENTES (SESSÕES RESTANTES) -->
+    <section id="section-packages-control" class="space-y-4 hidden">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 class="font-bold text-lg text-slate-800">Controle de Sessões de Pacotes</h3>
+          <p class="text-xs text-slate-500">Marque a presença e dê baixa nas sessões realizadas de cada pacote vendido.</p>
+        </div>
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <button onclick="quickPrintReport('packages')" class="px-3.5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Imprimir Pacotes
+          </button>
+          <button onclick="openSellPackageModal()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm shadow-md shadow-emerald-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-cart-plus"></i> Vender Pacote para Cliente
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+              <tr>
+                <th class="py-3.5 px-4">Cliente</th>
+                <th class="py-3.5 px-4">Pacote Contratado</th>
+                <th class="py-3.5 px-4">Progresso de Sessões</th>
+                <th class="py-3.5 px-4">Restantes</th>
+                <th class="py-3.5 px-4">Status</th>
+                <th class="py-3.5 px-4 text-right">Dar Baixa na Sessão</th>
+              </tr>
+            </thead>
+            <tbody id="client-packages-tbody" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 4: FLUXO DE CAIXA (FINANCEIRO) -->
+    <section id="section-cashflow" class="space-y-4 hidden">
+      <!-- Resumo Financeiro do Mês -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 shadow-sm">
+          <span class="text-xs font-bold uppercase tracking-wider text-emerald-700">Total de Entradas</span>
+          <h3 id="cf-total-in" class="text-2xl font-black text-emerald-800 mt-1">R$ 0,00</h3>
+          <p class="text-[11px] text-emerald-600 mt-0.5">Vendas de pacotes e sessões</p>
+        </div>
+
+        <div class="bg-rose-50 border border-rose-200 rounded-2xl p-5 shadow-sm">
+          <span class="text-xs font-bold uppercase tracking-wider text-rose-700">Total de Despesas / Saídas</span>
+          <h3 id="cf-total-out" class="text-2xl font-black text-rose-800 mt-1">R$ 0,00</h3>
+          <p class="text-[11px] text-rose-600 mt-0.5">Gel, manutenção, aluguel, luz</p>
+        </div>
+
+        <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 shadow-sm">
+          <span class="text-xs font-bold uppercase tracking-wider text-indigo-700">Saldo Líquido</span>
+          <h3 id="cf-total-balance" class="text-2xl font-black text-indigo-800 mt-1">R$ 0,00</h3>
+          <p class="text-[11px] text-indigo-600 mt-0.5">Lucro do período</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-600">Filtrar Mês:</span>
+          <input type="month" id="filter-cf-month" onchange="loadCashFlow()" class="text-sm px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+        </div>
+        <div class="flex gap-2">
+          <button onclick="quickPrintReport('cashflow')" class="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Imprimir Caixa
+          </button>
+          <button onclick="openCashFlowModal('entrada')" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs shadow-sm shadow-emerald-200 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i> Nova Entrada
+          </button>
+          <button onclick="openCashFlowModal('saida')" class="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs shadow-sm shadow-pink-200 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-minus"></i> Nova Despesa
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+              <tr>
+                <th class="py-3.5 px-4">Data</th>
+                <th class="py-3.5 px-4">Tipo</th>
+                <th class="py-3.5 px-4">Categoria / Descrição</th>
+                <th class="py-3.5 px-4">Forma Pagamento</th>
+                <th class="py-3.5 px-4">Valor</th>
+                <th class="py-3.5 px-4 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="cashflow-tbody" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 5: ANÁLISE ANTI-PERDA DE CLIENTES & RETENÇÃO -->
+    <section id="section-analytics" class="space-y-6 hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Bloco 1: Clientes em Risco de Churn (>30 dias sem sessão) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-bold text-base text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-user-clock text-rose-500"></i> Clientes em Risco de Abandono (+30 dias)
+              </h4>
+              <p class="text-xs text-slate-500">Para o laser funcionar, as sessões devem ocorrer a cada 30-45 dias. Recupere esses clientes agora!</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="quickPrintReport('retention')" class="px-2.5 py-1 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-xs transition flex items-center gap-1">
+                <i class="fa-solid fa-print"></i> Imprimir
+              </button>
+              <span id="badge-at-risk-count" class="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700">--</span>
+            </div>
+          </div>
+
+          <div id="analytics-at-risk-container" class="space-y-2.5 max-h-80 overflow-y-auto">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Bloco 2: Oportunidade de Renovação (Pacote no final) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-bold text-base text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-gift text-amber-500"></i> Oportunidade de Renovação (Upsell)
+              </h4>
+              <p class="text-xs text-slate-500">Clientes com 80%+ do pacote concluído. Momento ideal para oferecer manutenção ou novas áreas.</p>
+            </div>
+            <span id="badge-renewal-count" class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">--</span>
+          </div>
+
+          <div id="analytics-renewal-container" class="space-y-2.5 max-h-80 overflow-y-auto">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bloco 3: Procedimentos Mais Lucrativos -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+        <h4 class="font-bold text-base text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-ranking-star text-indigo-500"></i> Áreas e Pacotes Mais Vendidos
+        </h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+              <tr>
+                <th class="py-3 px-4">Procedimento / Pacote</th>
+                <th class="py-3 px-4">Agendamentos Totais</th>
+                <th class="py-3 px-4">Receita Estimada</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-top-services-tbody" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO 6: PREÇOS & PACOTES DO CATÁLOGO -->
     <section id="section-packages" class="space-y-6 hidden">
       <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between">
@@ -258,7 +526,6 @@
         </form>
       </div>
 
-      <!-- Tabela de Pacotes e Procedimentos Existentes -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="p-4 border-b border-slate-100 flex items-center justify-between">
           <h4 class="font-bold text-slate-800 text-sm">Pacotes e Procedimentos Ativos</h4>
@@ -284,7 +551,7 @@
       </div>
     </section>
 
-    <!-- SEÇÃO 4: DADOS DA CLÍNICA & LOGOTIPO -->
+    <!-- SEÇÃO 7: DADOS DA CLÍNICA & LOGOTIPO -->
     <section id="section-settings" class="space-y-6 hidden">
       <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl space-y-6">
         <div>
@@ -294,7 +561,6 @@
           <p class="text-xs text-slate-500 mt-0.5">As alterações feitas aqui aparecerão instantaneamente na tela dos seus clientes e no topo do painel.</p>
         </div>
 
-        <!-- Bloco de Logotipo -->
         <div class="p-5 bg-rose-50/50 rounded-2xl border border-rose-100 flex flex-col sm:flex-row items-center gap-6">
           <div class="w-24 h-24 rounded-2xl bg-white border-2 border-dashed border-rose-200 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0 relative">
             <i id="preview-logo-icon" class="fa-solid fa-wand-magic-sparkles text-3xl text-rose-300"></i>
@@ -315,7 +581,6 @@
           </div>
         </div>
 
-        <!-- Formulário de Textos e Informações -->
         <form id="form-clinic-settings" onsubmit="saveClinicSettings(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">Nome da Clínica *</label>
@@ -350,7 +615,551 @@
       </div>
     </section>
 
+    <!-- SEÇÃO 8: CENTRAL DE RELATÓRIOS & IMPRESSÃO -->
+    <section id="section-reports" class="space-y-6 hidden">
+      <!-- Painel de Controles (Não aparece na impressão) -->
+      <div id="report-controls-panel" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 class="font-bold text-lg text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-print text-rose-500"></i> Central de Emissão de Relatórios & Impressão
+            </h3>
+            <p class="text-xs text-slate-500">Selecione o tipo de relatório, configure o período e imprima ou salve em PDF no formato padrão A4.</p>
+          </div>
+
+          <button onclick="printReport()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-sm shadow-md shadow-emerald-200 transition flex items-center gap-2 self-start md:self-auto">
+            <i class="fa-solid fa-print text-base"></i> Imprimir / Salvar em PDF
+          </button>
+        </div>
+
+        <!-- Seletor de Tipo de Relatório -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          <button type="button" onclick="selectReportType('appointments')" id="report-tab-appointments" class="report-type-btn p-3 rounded-xl border border-rose-500 bg-rose-50/50 text-rose-700 font-bold text-xs flex flex-col items-center gap-1.5 transition">
+            <i class="fa-regular fa-calendar-days text-base text-rose-500"></i>
+            <span>Agenda & Atendimentos</span>
+          </button>
+
+          <button type="button" onclick="selectReportType('cashflow')" id="report-tab-cashflow" class="report-type-btn p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs flex flex-col items-center gap-1.5 transition">
+            <i class="fa-solid fa-wallet text-base text-emerald-500"></i>
+            <span>Fechamento de Caixa</span>
+          </button>
+
+          <button type="button" onclick="selectReportType('packages')" id="report-tab-packages" class="report-type-btn p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs flex flex-col items-center gap-1.5 transition">
+            <i class="fa-solid fa-clipboard-check text-base text-indigo-500"></i>
+            <span>Controle de Pacotes</span>
+          </button>
+
+          <button type="button" onclick="selectReportType('clients')" id="report-tab-clients" class="report-type-btn p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs flex flex-col items-center gap-1.5 transition">
+            <i class="fa-solid fa-users text-base text-purple-500"></i>
+            <span>Cadastro de Clientes</span>
+          </button>
+
+          <button type="button" onclick="selectReportType('retention')" id="report-tab-retention" class="report-type-btn p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs flex flex-col items-center gap-1.5 transition">
+            <i class="fa-solid fa-user-clock text-base text-amber-500"></i>
+            <span>Anti-Perda (+30 dias)</span>
+          </button>
+        </div>
+
+        <!-- Filtros de Período e Opções -->
+        <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-600">De:</span>
+              <input type="date" id="report-start-date" onchange="generateReport()" class="text-xs px-3 py-1.5 border border-slate-300 rounded-xl bg-white focus:ring-rose-500 focus:outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-600">Até:</span>
+              <input type="date" id="report-end-date" onchange="generateReport()" class="text-xs px-3 py-1.5 border border-slate-300 rounded-xl bg-white focus:ring-rose-500 focus:outline-none">
+            </div>
+
+            <!-- Botões Rápidos de Período -->
+            <div class="flex items-center gap-1 text-[11px]">
+              <button onclick="setReportPeriod('today')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Hoje</button>
+              <button onclick="setReportPeriod('this-week')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Esta Semana</button>
+              <button onclick="setReportPeriod('this-month')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Este Mês</button>
+              <button onclick="setReportPeriod('all')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition">Tudo</button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="generateReport()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs transition flex items-center gap-1.5">
+              <i class="fa-solid fa-arrows-rotate"></i> Atualizar Relatório
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOLHA TIMBRADA DO RELATÓRIO (FORMATO A4 PARA TELA E IMPRESSÃO) -->
+      <div id="printable-report-paper" class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6 text-slate-800">
+        <!-- Cabeçalho Oficial Timbrado -->
+        <div class="flex items-start justify-between border-b border-slate-200 pb-5">
+          <div class="flex items-center gap-4">
+            <div id="report-header-logo-wrapper" class="w-12 h-12 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-sm overflow-hidden flex-shrink-0">
+              <i id="report-header-logo-icon" class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+              <img id="report-header-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
+            </div>
+            <div>
+              <h2 id="report-header-clinic-name" class="font-extrabold text-xl text-slate-900 tracking-tight">LaserGlow Clinic</h2>
+              <p id="report-header-clinic-sub" class="text-xs text-slate-500">Clínica Especializada em Depilação a Laser e Estética Avançada</p>
+              <p id="report-header-clinic-contact" class="text-[11px] text-slate-400 mt-0.5">WhatsApp / Contato: (11) 98765-4321</p>
+            </div>
+          </div>
+          <div class="text-right text-xs text-slate-500 space-y-0.5">
+            <div class="font-bold text-slate-800 uppercase tracking-wider text-[11px]">Relatório Gerencial Oficial</div>
+            <div id="report-emission-date">Emitido em: --/--/---- às --:--</div>
+            <div id="report-period-text" class="font-semibold text-rose-600">Período: Completo</div>
+          </div>
+        </div>
+
+        <!-- Título do Relatório Selecionado -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 id="report-title-display" class="font-bold text-lg text-slate-900 uppercase tracking-wide">Relatório de Atendimentos & Agenda</h3>
+            <p id="report-desc-display" class="text-xs text-slate-500">Listagem analítica dos procedimentos e pacientes</p>
+          </div>
+          <span id="report-count-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">0 registros</span>
+        </div>
+
+        <!-- Cards / Resumo Executivo dos Totais -->
+        <div id="report-summary-cards" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- Tabela Analítica de Dados -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+            <thead id="report-table-head" class="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
+              <!-- Populated via JS -->
+            </thead>
+            <tbody id="report-table-body" class="divide-y divide-slate-200 text-slate-700">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Rodapé do Relatório & Assinatura -->
+        <div class="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-end gap-6 text-xs text-slate-500">
+          <div>
+            <p class="font-medium">Sistema de Gestão & Inteligência Clínica</p>
+            <p class="text-[10px] text-slate-400">Documento confidencial gerado eletronicamente para fins de controle e conferência.</p>
+          </div>
+          <div class="text-center w-64">
+            <div class="border-b border-slate-400 mb-1 pb-4"></div>
+            <p class="font-bold text-slate-800 text-xs">Responsável / Administrador(a)</p>
+            <p class="text-[10px] text-slate-400">Assinatura / Visto de Conferência</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
+
+  <!-- MODAL: CADASTRAR / EDITAR CLIENTE -->
+  <div id="modal-client" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 id="modal-client-title" class="font-bold text-lg text-slate-800">Novo Cadastro de Cliente</h3>
+        <button onclick="closeClientModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-client-save" onsubmit="submitClient(event)" class="space-y-3.5">
+        <input type="hidden" id="client-form-id">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo *</label>
+          <input type="text" id="client-form-name" required placeholder="Ex: Fernanda Lima" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">WhatsApp / Celular *</label>
+            <input type="tel" id="client-form-phone" required placeholder="11987654321" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">CPF (Opcional)</label>
+            <input type="text" id="client-form-cpf" placeholder="000.000.000-00" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Data de Nascimento</label>
+            <input type="date" id="client-form-birth" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail</label>
+            <input type="email" id="client-form-email" placeholder="cliente@email.com" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Ficha / Observações (Fototipo, Alergias, etc.)</label>
+          <textarea id="client-form-notes" rows="2" placeholder="Ex: Fototipo 3, sem histórico de queimaduras, pele sensível..." class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeClientModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition shadow-md shadow-pink-200">Salvar Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: VENDER PACOTE PARA CLIENTE -->
+  <div id="modal-sell-package" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-cart-plus text-emerald-500"></i> Vender Pacote
+        </h3>
+        <button onclick="closeSellPackageModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-sell-package" onsubmit="submitSellPackage(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Selecione o Cliente *</label>
+          <select id="sell-pkg-client" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Selecione o Pacote *</label>
+          <select id="sell-pkg-service" onchange="autoFillPackagePrice()" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+            <!-- Populated via JS -->
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Valor Cobrado (R$) *</label>
+            <input type="number" step="0.01" id="sell-pkg-price" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl font-bold text-emerald-600 focus:ring-rose-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Forma de Pagamento</label>
+            <select id="sell-pkg-payment" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+              <option value="Pix">Pix</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Dinheiro">Dinheiro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeSellPackageModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition shadow-md shadow-emerald-200">Confirmar Venda</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: FICHA DO CLIENTE / ANAMNESE COMPLETA (BASEADA NO MODELO LUZ E PELE) -->
+  <div id="modal-anamnese" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 animate-scale">
+      
+      <!-- Topo Modal -->
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-3xl">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-md shadow-pink-200">
+            <i class="fa-solid fa-notes-medical"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-slate-900">Ficha do Cliente & Termo de Anamnese</h3>
+            <p id="anamnese-client-header" class="text-xs text-slate-500 font-medium">Cliente: Mariana Silva | WhatsApp: 11987654321</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 no-print">
+          <button type="button" onclick="printAnamneseModal()" class="px-3 py-1.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-print"></i> Imprimir Ficha
+          </button>
+          <button type="button" onclick="closeAnamneseModal()" class="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Corpo da Ficha (Scrollável) -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-slate-700 text-xs">
+        <form id="form-anamnese" onsubmit="submitAnamnese(event)" class="space-y-6">
+          <input type="hidden" id="anamnese-client-id">
+
+          <!-- 1. DADOS PESSOAIS -->
+          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+            <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+              <i class="fa-regular fa-id-card"></i> 1. Dados Pessoais & Contratuais
+            </h4>
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Nº de Contrato</label>
+                <input type="text" id="anamnese-contract" placeholder="Ex: CT-0012" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block font-semibold text-slate-600 mb-1">Nome Completo</label>
+                <input type="text" id="anamnese-name" readonly class="w-full px-3 py-2 border rounded-xl bg-slate-50 font-bold text-slate-800">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Sexo</label>
+                <select id="anamnese-sexo" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+                  <option value="F">Feminino (F)</option>
+                  <option value="M">Masculino (M)</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Data de Nasc.</label>
+                <input type="date" id="anamnese-birth" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Celular / WhatsApp</label>
+                <input type="tel" id="anamnese-phone" readonly class="w-full px-3 py-2 border rounded-xl bg-slate-50 font-bold">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Tel. Fixo</label>
+                <input type="text" id="anamnese-telfixo" placeholder="(11) 3333-0000" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">CPF</label>
+                <input type="text" id="anamnese-cpf" placeholder="000.000.000-00" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div class="sm:col-span-2">
+                <label class="block font-semibold text-slate-600 mb-1">Endereço (Rua, Número, Compl.)</label>
+                <input type="text" id="anamnese-endereco" placeholder="Rua das Flores, 123" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Bairro</label>
+                <input type="text" id="anamnese-bairro" placeholder="Centro" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">CEP</label>
+                <input type="text" id="anamnese-cep" placeholder="00000-000" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Cidade / UF</label>
+                <div class="flex gap-1.5">
+                  <input type="text" id="anamnese-cidade" placeholder="São Paulo" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+                  <input type="text" id="anamnese-uf" placeholder="SP" maxlength="2" class="w-14 px-2 py-2 border rounded-xl text-center uppercase focus:ring-rose-500 focus:outline-none">
+                </div>
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Instagram (@)</label>
+                <input type="text" id="anamnese-instagram" placeholder="@cliente" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Profissão</label>
+                <input type="text" id="anamnese-profissao" placeholder="Ex: Advogada" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Como conheceu a clínica?</label>
+                <select id="anamnese-conheceu" class="w-full px-3 py-2 border rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+                  <option value="Instagram">Instagram / Redes Sociais</option>
+                  <option value="Google">Google / Pesquisa</option>
+                  <option value="Indicacao">Indicação de Amigo</option>
+                  <option value="Passando na Frente">Passando em frente</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. TRATAMENTO & ÁREAS -->
+          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+              <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 2. Tratamento & Áreas Selecionadas
+              </h4>
+              <div class="flex gap-3 text-xs font-semibold">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="anamnese-tipo-trat" value="Depilação" checked class="text-rose-600 focus:ring-rose-500"> Depilação a Laser
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="anamnese-tipo-trat" value="Fotorrejuvenescimento" class="text-rose-600 focus:ring-rose-500"> Fotorrejuvenescimento
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="anamnese-tipo-trat" value="Pro-Skin" class="text-rose-600 focus:ring-rose-500"> Pro-Skin
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <p class="font-semibold text-slate-700 mb-2">Marque as áreas tratadas nesta ficha:</p>
+              <div id="anamnese-areas-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2 text-[11px]">
+                <!-- Checkboxes de todas as áreas do papel -->
+              </div>
+            </div>
+
+            <!-- Pergunta Alerta de Sol -->
+            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span class="font-bold text-amber-900 text-xs">
+                ⚠️ Esteve exposto(a) ao sol ou raios UVA / Bronzeamento artificial nas últimas 48 horas?
+              </span>
+              <div class="flex gap-4 font-bold text-xs">
+                <label class="flex items-center gap-1 cursor-pointer text-rose-600">
+                  <input type="radio" name="anamnese-sol48" value="Sim" class="text-rose-600"> SIM
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer text-emerald-600">
+                  <input type="radio" name="anamnese-sol48" value="Não" checked class="text-emerald-600"> NÃO
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. HISTÓRICO DE PATOLOGIAS (MARCAR AS OPÇÕES) -->
+          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+            <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+              <i class="fa-solid fa-heart-pulse"></i> 3. Histórico de Patologias & Condições de Saúde
+            </h4>
+            <p class="text-[11px] text-slate-500">Assinale todas as opções que se aplicam ao histórico do(a) cliente:</p>
+            
+            <div id="anamnese-patologias-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
+              <!-- Gerado via JS com todas as patologias da ficha -->
+            </div>
+          </div>
+
+          <!-- 4. HISTÓRICO ATUAL / QUESTIONÁRIO MÉDICO (SIM / NÃO / ESPECIFIQUE) -->
+          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+            <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+              <i class="fa-solid fa-stethoscope"></i> 4. Questionário Médico & Medicamentos Atuais
+            </h4>
+            <div id="anamnese-perguntas-container" class="divide-y divide-slate-100 space-y-2">
+              <!-- Gerado via JS com as 16 perguntas do papel -->
+            </div>
+          </div>
+
+          <!-- 5. REAÇÃO AO SOL / FOTOTIPO & ASSINATURA -->
+          <div class="border border-slate-200 rounded-2xl p-4 space-y-4 bg-white">
+            <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+              <i class="fa-solid fa-sun"></i> 5. Reação da Pele ao Sol & Termo de Responsabilidade
+            </h4>
+
+            <div class="space-y-2">
+              <p class="font-semibold text-slate-700">Como a sua pele reage quando você se expõe ao sol?</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <label class="p-2 border rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                  <input type="radio" name="anamnese-reacao-sol" value="A pele fica bronzeada" class="text-rose-600"> A pele fica bronzeada facilmente
+                </label>
+                <label class="p-2 border rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                  <input type="radio" name="anamnese-reacao-sol" value="A pele apresenta vermelhidão" class="text-rose-600"> A pele apresenta vermelhidão primeiro
+                </label>
+                <label class="p-2 border rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                  <input type="radio" name="anamnese-reacao-sol" value="Vermelhidão por mais de 1 dia" class="text-rose-600"> A vermelhidão perdura por mais de um dia
+                </label>
+                <label class="p-2 border rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+                  <input type="radio" name="anamnese-reacao-sol" value="Após a vermelhidão fica bronzeada" class="text-rose-600"> Após a vermelhidão, a pele fica bronzeada
+                </label>
+              </div>
+            </div>
+
+            <!-- Termo e Assinatura Digital do Cliente -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <p class="text-[11px] text-slate-600 italic leading-relaxed">
+                "Confirmo ter respondido ao presente questionário com total sinceridade e verdade. Estou ciente das recomendações e cuidados pré e pós-aplicação de depilação a laser informados pela clínica."
+              </p>
+
+              <!-- Assinatura Manuscrita Digital Capturada -->
+              <div id="anamnese-signature-img-container" class="hidden p-3 bg-white border border-slate-200 rounded-xl space-y-1">
+                <span class="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5">
+                  <i class="fa-solid fa-signature text-rose-500"></i> Assinatura Digital Capturada (Touchscreen / Mouse):
+                </span>
+                <div class="h-24 w-full flex items-center justify-center bg-white border-b border-dashed border-slate-300">
+                  <img id="anamnese-signature-img" src="" alt="Assinatura Digital" class="max-h-20 object-contain">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Nome para Assinatura / Aceite do Cliente</label>
+                  <input type="text" id="anamnese-sign-name" required placeholder="Digite o nome completo do cliente" class="w-full px-3 py-2 border rounded-xl bg-white font-semibold text-slate-900 focus:ring-rose-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Data do Aceite</label>
+                  <input type="text" id="anamnese-sign-date" readonly class="w-full px-3 py-2 border rounded-xl bg-slate-100 font-mono text-slate-700">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botões Salvar -->
+          <div class="pt-3 flex justify-end gap-2 border-t border-slate-100 sticky bottom-0 bg-white py-3 no-print">
+            <button type="button" onclick="closeAnamneseModal()" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-50 text-xs font-semibold">
+              Fechar
+            </button>
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-xs shadow-md shadow-pink-200 transition flex items-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Salvar Ficha de Anamnese
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: FLUXO DE CAIXA (ENTRADA / DESPESA) -->
+  <div id="modal-cashflow" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 id="modal-cf-title" class="font-bold text-lg text-slate-800">Lançamento no Caixa</h3>
+        <button onclick="closeCashFlowModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-cashflow" onsubmit="submitCashFlow(event)" class="space-y-3.5">
+        <input type="hidden" id="cf-type" value="entrada">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Categoria *</label>
+          <select id="cf-category" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+            <!-- Dinâmico -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Descrição do Lançamento *</label>
+          <input type="text" id="cf-description" required placeholder="Ex: Compra de luvas e gel condutor" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Valor (R$) *</label>
+            <input type="number" step="0.01" id="cf-amount" required placeholder="150.00" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl font-bold focus:ring-rose-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Data *</label>
+            <input type="date" id="cf-date" required class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Forma de Pagamento</label>
+          <select id="cf-payment" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none bg-white">
+            <option value="Pix">Pix</option>
+            <option value="Cartão de Crédito">Cartão de Crédito</option>
+            <option value="Cartão de Débito">Cartão de Débito</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Boleto">Boleto</option>
+          </select>
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeCashFlowModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">Cancelar</button>
+          <button type="submit" id="btn-cf-save" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition shadow-md shadow-pink-200">Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- MODAL: REAGENDAMENTO -->
   <div id="modal-reschedule" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -382,70 +1191,21 @@
       </div>
 
       <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-        <button onclick="closeRescheduleModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">
-          Cancelar
-        </button>
-        <button id="btn-save-reschedule" disabled onclick="submitReschedule()" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
-          Salvar Reagendamento
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: MENSAGEM CUSTOMIZADA WHATSAPP -->
-  <div id="modal-whatsapp" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-5">
-      <div class="flex justify-between items-center">
-        <div>
-          <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-            <i class="fa-brands fa-whatsapp text-emerald-500 text-xl"></i> Disparar Mensagem no WhatsApp
-          </h3>
-          <p id="whatsapp-modal-target" class="text-xs text-slate-500 font-medium">Para: Mariana (+55 11 98765-4321)</p>
-        </div>
-        <button onclick="closeWhatsAppModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-2">Modelos Prontos de Mensagem (Templates):</label>
-        <div class="flex flex-wrap gap-2 mb-3">
-          <button type="button" onclick="applyTemplate('reminder')" class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-medium transition">
-            ⏰ Lembrete de Horário
-          </button>
-          <button type="button" onclick="applyTemplate('confirm')" class="text-xs px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-medium transition">
-            ✅ Solicitar Confirmação
-          </button>
-          <button type="button" onclick="applyTemplate('reschedule')" class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 font-medium transition">
-            🔄 Reagendamento / Aviso
-          </button>
-          <button type="button" onclick="applyTemplate('care')" class="text-xs px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-medium transition">
-            ✨ Cuidados Pré-Laser
-          </button>
-        </div>
-
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Texto da Mensagem:</label>
-        <textarea id="whatsapp-text" rows="5" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-emerald-500 focus:outline-none"></textarea>
-      </div>
-
-      <div class="pt-2 flex justify-between items-center border-t border-slate-100">
-        <span class="text-xs text-slate-400">Abre diretamente no WhatsApp Web / Desktop</span>
-        <button onclick="sendToWhatsAppWeb()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold shadow-md shadow-emerald-200 flex items-center gap-2 transition">
-          <i class="fa-brands fa-whatsapp text-base"></i> Abrir no WhatsApp Web
-        </button>
+        <button onclick="closeRescheduleModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">Cancelar</button>
+        <button id="btn-save-reschedule" disabled onclick="submitReschedule()" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">Salvar Reagendamento</button>
       </div>
     </div>
   </div>
 
   <!-- MODAL: EDITAR PACOTE / PROCEDIMENTO -->
   <div id="modal-edit-service" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-scale">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-scale">
       <div class="flex justify-between items-center">
         <div>
           <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
             <i class="fa-solid fa-pen-to-square text-rose-500"></i> Editar Pacote / Procedimento
           </h3>
-          <p class="text-xs text-slate-500 font-medium">Altere os dados, valores ou sessões deste item.</p>
+          <p class="text-xs text-slate-500 font-medium">Altere dados, valores ou sessões deste item.</p>
         </div>
         <button onclick="closeEditServiceModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
           <i class="fa-solid fa-xmark"></i>
@@ -488,14 +1248,55 @@
         </div>
 
         <div class="pt-3 flex justify-end gap-2 border-t border-slate-100">
-          <button type="button" onclick="closeEditServiceModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">
-            Cancelar
-          </button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition shadow-md shadow-pink-200">
-            Salvar Alterações
-          </button>
+          <button type="button" onclick="closeEditServiceModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition shadow-md shadow-pink-200">Salvar Alterações</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: WHATSAPP -->
+  <div id="modal-whatsapp" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <i class="fa-brands fa-whatsapp text-emerald-500 text-xl"></i> Disparar Mensagem no WhatsApp
+          </h3>
+          <p id="whatsapp-modal-target" class="text-xs text-slate-500 font-medium">Para: Cliente</p>
+        </div>
+        <button onclick="closeWhatsAppModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2">Modelos Prontos de Mensagem (Templates):</label>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <button type="button" onclick="applyTemplate('reminder')" class="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-medium transition">
+            ⏰ Lembrete Horário
+          </button>
+          <button type="button" onclick="applyTemplate('confirm')" class="text-xs px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 font-medium transition">
+            ✅ Confirmação
+          </button>
+          <button type="button" onclick="applyTemplate('reschedule')" class="text-xs px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 font-medium transition">
+            🔄 Retorno / Reagendamento
+          </button>
+          <button type="button" onclick="applyTemplate('care')" class="text-xs px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 font-medium transition">
+            ✨ Cuidados Pré-Laser
+          </button>
+        </div>
+
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Texto da Mensagem:</label>
+        <textarea id="whatsapp-text" rows="5" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-emerald-500 focus:outline-none"></textarea>
+      </div>
+
+      <div class="pt-2 flex justify-between items-center border-t border-slate-100">
+        <span class="text-xs text-slate-400">Abre no WhatsApp Web / Desktop</span>
+        <button onclick="sendToWhatsAppWeb()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold shadow-md shadow-emerald-200 flex items-center gap-2 transition">
+          <i class="fa-brands fa-whatsapp text-base"></i> Abrir no WhatsApp Web
+        </button>
+      </div>
     </div>
   </div>
 
@@ -504,10 +1305,10 @@
     let appointmentsList = [];
     let clientsList = [];
     let servicesList = [];
+    let clientPackagesList = [];
     let currentModalData = null;
     let selectedRescheduleTime = null;
 
-    // Checagem de Autenticação Inicial
     window.onload = () => {
       if (adminToken) {
         document.getElementById('login-screen').classList.add('hidden');
@@ -557,146 +1358,34 @@
       loadAppointments();
       loadClients();
       loadServices();
+      loadClientPackages();
+      loadCashFlow();
+      loadAnalytics();
       loadClinicSettings();
     }
 
     function switchTab(tab) {
-      ['appointments', 'clients', 'packages', 'settings'].forEach(t => {
-        document.getElementById(`section-${t}`).classList.add('hidden');
-        document.getElementById(`tab-btn-${t}`).className = "px-5 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap";
+      ['appointments', 'clients', 'packages-control', 'cashflow', 'analytics', 'reports', 'packages', 'settings'].forEach(t => {
+        const sec = document.getElementById(`section-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (sec) sec.classList.add('hidden');
+        if (btn) btn.className = "px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap";
       });
 
-      document.getElementById(`section-${tab}`).classList.remove('hidden');
-      document.getElementById(`tab-btn-${tab}`).className = "px-5 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap";
+      const activeSec = document.getElementById(`section-${tab}`);
+      const activeBtn = document.getElementById(`tab-btn-${tab}`);
+      if (activeSec) activeSec.classList.remove('hidden');
+      if (activeBtn) activeBtn.className = "px-4 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap";
 
-      if (tab === 'packages') loadServices();
+      if (tab === 'packages' || tab === 'packages-control') { loadServices(); loadClientPackages(); }
       if (tab === 'clients') loadClients();
+      if (tab === 'cashflow') loadCashFlow();
+      if (tab === 'analytics') loadAnalytics();
+      if (tab === 'reports') initReportsTab();
       if (tab === 'settings') loadClinicSettings();
     }
 
-    // Configurações da Clínica & Logotipo
-    async function loadClinicSettings() {
-      try {
-        const res = await fetch('/api/settings');
-        const settings = await res.json();
-        
-        // Aplica no topo do admin
-        if (settings.name) {
-          document.getElementById('admin-display-name').textContent = settings.name;
-          document.getElementById('setting-name').value = settings.name;
-        }
-        if (settings.subtitle) {
-          document.getElementById('setting-subtitle').value = settings.subtitle;
-        }
-        if (settings.phone) {
-          document.getElementById('setting-phone').value = settings.phone;
-        }
-        if (settings.instagram) {
-          document.getElementById('setting-instagram').value = settings.instagram;
-        }
-
-        // Logotipo
-        const logoUrl = settings.logo_url || '';
-        document.getElementById('setting-logo-url').value = logoUrl;
-        updateLogoPreviews(logoUrl);
-
-      } catch (err) {
-        console.error("Erro ao carregar configurações", err);
-      }
-    }
-
-    function updateLogoPreviews(url) {
-      const adminImg = document.getElementById('admin-logo-img');
-      const adminIcon = document.getElementById('admin-logo-icon');
-      const prevImg = document.getElementById('preview-logo-img');
-      const prevIcon = document.getElementById('preview-logo-icon');
-
-      if (url) {
-        adminImg.src = url;
-        adminImg.classList.remove('hidden');
-        adminIcon.classList.add('hidden');
-
-        prevImg.src = url;
-        prevImg.classList.remove('hidden');
-        prevIcon.classList.add('hidden');
-      } else {
-        adminImg.classList.add('hidden');
-        adminIcon.classList.remove('hidden');
-
-        prevImg.classList.add('hidden');
-        prevIcon.classList.remove('hidden');
-      }
-    }
-
-    async function handleLogoUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const res = await fetch('/api/admin/upload-logo', {
-          method: 'POST',
-          headers: {
-            'x-admin-pin': adminToken || ''
-          },
-          body: formData
-        });
-
-        if (!res.ok) {
-          alert("Erro ao enviar o logotipo.");
-          return;
-        }
-
-        const data = await res.json();
-        document.getElementById('setting-logo-url').value = data.logo_url;
-        updateLogoPreviews(data.logo_url);
-        alert("Logotipo atualizado com sucesso!");
-      } catch (err) {
-        alert("Erro na conexão durante o upload.");
-      }
-    }
-
-    function removeLogo() {
-      document.getElementById('setting-logo-url').value = '';
-      updateLogoPreviews('');
-    }
-
-    async function saveClinicSettings(e) {
-      e.preventDefault();
-      const name = document.getElementById('setting-name').value.trim();
-      const subtitle = document.getElementById('setting-subtitle').value.trim();
-      const logo_url = document.getElementById('setting-logo-url').value.trim();
-      const phone = document.getElementById('setting-phone').value.trim();
-      const instagram = document.getElementById('setting-instagram').value.trim();
-
-      try {
-        const res = await fetch('/api/admin/settings', {
-          method: 'PUT',
-          headers: getAdminHeaders(),
-          body: JSON.stringify({
-            name,
-            subtitle,
-            logo_url,
-            phone,
-            instagram
-          })
-        });
-
-        if (!res.ok) {
-          alert("Erro ao salvar dados da clínica.");
-          return;
-        }
-
-        document.getElementById('admin-display-name').textContent = name;
-        alert("Informações da clínica atualizadas com sucesso!");
-      } catch (err) {
-        alert("Erro na conexão.");
-      }
-    }
-
-    // Carregar Atendimentos
+    // 1. ATENDIMENTOS
     async function loadAppointments() {
       const dateVal = document.getElementById('filter-date').value;
       const statusVal = document.getElementById('filter-status').value;
@@ -712,7 +1401,6 @@
         if (res.status === 401) { logoutAdmin(); return; }
         appointmentsList = await res.json();
         renderAppointments(appointmentsList);
-        updateKPIs(appointmentsList);
       } catch (err) {
         console.error("Erro ao listar agendamentos", err);
       }
@@ -737,9 +1425,7 @@
             </td>
             <td class="py-4 px-4">
               <div class="font-bold text-slate-900">${app.client_name}</div>
-              <div class="text-xs text-slate-500 flex items-center gap-1.5">
-                <i class="fa-solid fa-phone text-slate-400"></i> ${app.client_phone}
-              </div>
+              <div class="text-xs text-slate-500 flex items-center gap-1.5"><i class="fa-solid fa-phone text-slate-400"></i> ${app.client_phone}</div>
             </td>
             <td class="py-4 px-4">
               <div class="font-medium text-slate-800">${app.service_name}</div>
@@ -768,6 +1454,7 @@
       }).join('');
     }
 
+    // 2. CADASTRO DE CLIENTES
     async function loadClients() {
       try {
         const res = await fetch('/api/clients', { headers: getAdminHeaders() });
@@ -783,12 +1470,12 @@
     function renderClients(clients) {
       const tbody = document.getElementById('clients-tbody');
       if (clients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">Nenhum cliente cadastrado ainda.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum cliente cadastrado ainda.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = clients.map(c => {
-        let lastDate = 'Nenhuma';
+        let lastDate = 'Nenhuma sessão';
         if (c.last_appointment_date) {
           const [y, m, d] = c.last_appointment_date.split('-');
           lastDate = `${d}/${m}/${y}`;
@@ -796,13 +1483,38 @@
 
         return `
           <tr class="hover:bg-slate-50/80 transition">
-            <td class="py-4 px-4 font-bold text-slate-900">${c.name}</td>
-            <td class="py-4 px-4 font-mono text-slate-600 text-xs">${c.phone}</td>
-            <td class="py-4 px-4 font-semibold text-slate-700">${c.total_appointments} sessão(ões)</td>
+            <td class="py-4 px-4 font-bold text-slate-900">
+              <div>${c.name}</div>
+              ${c.notes ? `<div class="text-[11px] text-slate-500 font-normal italic max-w-xs truncate" title="${c.notes}"><i class="fa-solid fa-notes-medical text-rose-400 mr-1"></i>${c.notes}</div>` : ''}
+            </td>
+            <td class="py-4 px-4 font-mono text-slate-600 text-xs">
+              <div>${c.phone}</div>
+              ${c.cpf ? `<div class="text-slate-400 text-[10px]">CPF: ${c.cpf}</div>` : ''}
+            </td>
+            <td class="py-4 px-4">
+              <span class="text-xs px-2.5 py-1 rounded-full font-bold ${c.active_packages_count > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+                ${c.active_packages_count} pacote(s)
+              </span>
+            </td>
+            <td class="py-4 px-4 font-bold text-emerald-600">
+              R$ ${(c.total_spent || 0).toFixed(2).replace('.', ',')}
+            </td>
             <td class="py-4 px-4 text-xs text-slate-500">${lastDate}</td>
-            <td class="py-4 px-4 text-center">
-              <button onclick="openWhatsAppModalForClient('${c.name}', '${c.phone}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold shadow-sm shadow-emerald-200 transition">
-                <i class="fa-brands fa-whatsapp text-sm"></i> Chamar no WhatsApp
+            <td class="py-4 px-4 text-center space-x-1.5 whitespace-nowrap">
+              <button onclick="openAnamneseModal(${c.id})" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs transition border border-rose-200" title="Ver / Preencher Ficha do Cliente (Luz e Pele)">
+                <i class="fa-solid fa-file-medical mr-1"></i> Ficha Anamnese
+              </button>
+              <button onclick="sendFichaLinkToClient('${c.name}', '${c.phone}')" class="px-2 py-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-xs transition border border-teal-200" title="Enviar Link da Ficha para o Cliente Preencher e Assinar no WhatsApp">
+                <i class="fa-solid fa-signature text-xs mr-1"></i> Enviar Ficha
+              </button>
+              <button onclick="openWhatsAppModalForClient('${c.name}', '${c.phone}')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition" title="Chamar no WhatsApp">
+                <i class="fa-brands fa-whatsapp text-sm"></i>
+              </button>
+              <button onclick="editClient(${c.id})" class="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" title="Editar Dados Básicos">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <button onclick="deleteClient(${c.id})" class="p-1.5 rounded-lg bg-slate-100 text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition" title="Excluir">
+                <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </td>
           </tr>
@@ -810,14 +1522,676 @@
       }).join('');
     }
 
-    // Carregar e Gerenciar Pacotes
+    function openNewClientModal() {
+      document.getElementById('modal-client-title').textContent = "Novo Cadastro de Cliente";
+      document.getElementById('client-form-id').value = "";
+      document.getElementById('form-client-save').reset();
+      document.getElementById('modal-client').classList.remove('hidden');
+    }
+
+    function editClient(id) {
+      const c = clientsList.find(item => item.id === id);
+      if (!c) return;
+      document.getElementById('modal-client-title').textContent = "Editar Ficha de Cliente";
+      document.getElementById('client-form-id').value = c.id;
+      document.getElementById('client-form-name').value = c.name;
+      document.getElementById('client-form-phone').value = c.phone;
+      document.getElementById('client-form-cpf').value = c.cpf || "";
+      document.getElementById('client-form-birth').value = c.birth_date || "";
+      document.getElementById('client-form-email').value = c.email || "";
+      document.getElementById('client-form-notes').value = c.notes || "";
+      document.getElementById('modal-client').classList.remove('hidden');
+    }
+
+    function closeClientModal() {
+      document.getElementById('modal-client').classList.add('hidden');
+    }
+
+    async function submitClient(e) {
+      e.preventDefault();
+      const id = document.getElementById('client-form-id').value;
+      const payload = {
+        name: document.getElementById('client-form-name').value.trim(),
+        phone: document.getElementById('client-form-phone').value.trim(),
+        email: document.getElementById('client-form-email').value.trim(),
+        cpf: document.getElementById('client-form-cpf').value.trim(),
+        birth_date: document.getElementById('client-form-birth').value,
+        notes: document.getElementById('client-form-notes').value.trim()
+      };
+
+      try {
+        const url = id ? `/api/admin/clients/${id}` : '/api/admin/clients';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: getAdminHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || "Erro ao salvar cliente.");
+          return;
+        }
+
+        closeClientModal();
+        loadClients();
+        loadAnalytics();
+        alert("Cliente salvo com sucesso!");
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    async function deleteClient(id) {
+      if (!confirm("Tem certeza que deseja excluir este cliente? Seus agendamentos também serão excluídos.")) return;
+      try {
+        const res = await fetch(`/api/admin/clients/${id}`, {
+          method: 'DELETE',
+          headers: getAdminHeaders()
+        });
+        if (res.ok) { loadClients(); }
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    // LISTAS DA FOLHA DE ANAMNESE (LUZ E PELE)
+    const ANAMNESE_AREAS = [
+      "Abdômen inf.", "Abdômen sup.", "Antebraços", "Axilas", "Barba", "Base do pênis",
+      "Bigode", "Braços", "Braços inteiros", "Busto", "Buço", "Cavanhaque",
+      "Costas", "Costeletas", "Coxa completa", "Dorsal", "Faixa de Barba", "Glabela",
+      "Glúteo médio", "Glúteos", "Interior da coxa", "Joelhos", "Linha alba", "Lombar",
+      "Mamilos", "Mãos", "Maçãs do Rosto", "Meia perna", "Nariz", "Nuca",
+      "Ombros", "Orelhas", "Pernas inteiras", "Perianal", "Pés", "Pescoço",
+      "Posterior da coxa", "Queixo", "Testa", "Tórax", "Virilha completa", "Outros"
+    ];
+
+    const ANAMNESE_PATOLOGIAS = [
+      "Está grávida ou amamentando", "Psoríase / Vitiligo", "Queloides", "Epilepsia / Hemofilia",
+      "Cicatrizes", "Diabetes insulino-dependente", "Diabetes não insulino-dependente", "Lúpus",
+      "Dependente químico", "Acne", "Dermatite / Dermatomiosite", "Queimadura / Enxerto cutâneo",
+      "Terapia esteroide ou hormonal", "Hemangioma", "Neuropatia diabética", "Pigmentação cutânea / Pintas",
+      "Hirsutismo / Hipertricose", "Tatuagens ou micropigmentação", "Câncer de pele / Melanoma",
+      "Câncer (radioterapia/quimioterapia)", "Doença renal", "Desequilíbrio hormonal", "Ovário policístico",
+      "Doenças oculares", "Tireoide (Hipo/Hiper)", "Marcapasso ou próteses metálicas"
+    ];
+
+    const ANAMNESE_PERGUNTAS = [
+      "Está em tratamento médico, estético ou cosmético?",
+      "Pratica atividade física?",
+      "Faz uso de suplemento alimentar?",
+      "Realizou tratamentos de luz pulsada ou depilação a laser antes?",
+      "Usou/usa ácido Glicólico, retinóico ou outros na área a tratar?",
+      "Realizou ou pretende realizar tratamento de rugas de expressão com toxina botulínica (botox) ou preenchimento?",
+      "Usou ou usa Roacutan (Isotretinoína) ou medicamento similar nos últimos 6 meses?",
+      "Usa algum produto cosmético para a pele?",
+      "Tem algum implante ou fio metálico na área a tratar?",
+      "Tem tatuagem ou maquiagem definitiva na área a tratar?",
+      "Tem intenção de fazer tatuagem na área a ser depilada?",
+      "Submeteu-se alguma vez a tratamento endócrino?",
+      "Tem problema de sensibilização cutânea ou alguma alergia?",
+      "Submeteu-se a alguma cirurgia nos últimos 3 meses?",
+      "É portador(a) de alguma doença transmissível?",
+      "Utilizou algum medicamento nos últimos 30 dias?"
+    ];
+
+    function buildAnamneseDOM() {
+      // 1. Áreas
+      const areasGrid = document.getElementById('anamnese-areas-grid');
+      if (areasGrid && areasGrid.children.length === 0) {
+        areasGrid.innerHTML = ANAMNESE_AREAS.map(area => `
+          <label class="p-1.5 border rounded-lg flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" name="anamnese-area" value="${area}" class="text-rose-600 rounded">
+            <span>${area}</span>
+          </label>
+        `).join('');
+      }
+
+      // 2. Patologias
+      const patGrid = document.getElementById('anamnese-patologias-grid');
+      if (patGrid && patGrid.children.length === 0) {
+        patGrid.innerHTML = ANAMNESE_PATOLOGIAS.map(pat => `
+          <label class="p-1.5 border rounded-lg flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" name="anamnese-patologia" value="${pat}" class="text-rose-600 rounded">
+            <span>${pat}</span>
+          </label>
+        `).join('');
+      }
+
+      // 3. Questionário Médico
+      const pergBox = document.getElementById('anamnese-perguntas-container');
+      if (pergBox && pergBox.children.length === 0) {
+        pergBox.innerHTML = ANAMNESE_PERGUNTAS.map((perg, idx) => `
+          <div class="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span class="font-medium text-slate-800 flex-1">${idx + 1}. ${perg}</span>
+            <div class="flex items-center gap-3">
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-rose-600">
+                <input type="radio" name="anamnese-perg-${idx}" value="Sim" onchange="toggleAnamneseEspec(${idx}, true)"> SIM
+              </label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-emerald-600">
+                <input type="radio" name="anamnese-perg-${idx}" value="Não" checked onchange="toggleAnamneseEspec(${idx}, false)"> NÃO
+              </label>
+              <input type="text" id="anamnese-espec-${idx}" placeholder="Especifique..." class="hidden text-[11px] px-2 py-1 border rounded-lg w-44 focus:ring-rose-500 focus:outline-none">
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function toggleAnamneseEspec(idx, show) {
+      const input = document.getElementById(`anamnese-espec-${idx}`);
+      if (input) {
+        if (show) input.classList.remove('hidden');
+        else { input.classList.add('hidden'); input.value = ''; }
+      }
+    }
+
+    async function openAnamneseModal(clientId) {
+      buildAnamneseDOM();
+      document.getElementById('form-anamnese').reset();
+      document.getElementById('anamnese-client-id').value = clientId;
+
+      try {
+        const res = await fetch(`/api/admin/clients/${clientId}/anamnese`, { headers: getAdminHeaders() });
+        const data = await res.json();
+        const c = data.client;
+        const a = data.anamnese;
+
+        document.getElementById('anamnese-client-header').textContent = `Cliente: ${c.name} | Celular: ${c.phone} | CPF: ${c.cpf || 'Não informado'}`;
+        document.getElementById('anamnese-name').value = c.name;
+        document.getElementById('anamnese-phone').value = c.phone;
+        document.getElementById('anamnese-cpf').value = c.cpf || "";
+        document.getElementById('anamnese-birth').value = c.birth_date || "";
+
+        // Se já tiver ficha salva
+        if (a) {
+          document.getElementById('anamnese-contract').value = a.contract_number || "";
+          document.getElementById('anamnese-sexo').value = a.sexo || "F";
+          document.getElementById('anamnese-endereco').value = a.endereco || "";
+          document.getElementById('anamnese-bairro').value = a.bairro || "";
+          document.getElementById('anamnese-cep').value = a.cep || "";
+          document.getElementById('anamnese-cidade').value = a.cidade || "";
+          document.getElementById('anamnese-uf').value = a.uf || "";
+          document.getElementById('anamnese-telfixo').value = a.tel_fixo || "";
+          document.getElementById('anamnese-instagram').value = a.instagram || "";
+          document.getElementById('anamnese-profissao').value = a.profissao || "";
+          document.getElementById('anamnese-conheceu').value = a.como_conheceu || "Instagram";
+
+          // Tipo de tratamento
+          const tipoRadio = document.querySelector(`input[name="anamnese-tipo-trat"][value="${a.tipo_tratamento}"]`);
+          if (tipoRadio) tipoRadio.checked = true;
+
+          // Sol 48h
+          const solRadio = document.querySelector(`input[name="anamnese-sol48"][value="${a.exposicao_sol_48h}"]`);
+          if (solRadio) solRadio.checked = true;
+
+          // Áreas
+          try {
+            const areas = JSON.parse(a.areas_tratamento || "[]");
+            document.querySelectorAll('input[name="anamnese-area"]').forEach(cb => {
+              cb.checked = areas.includes(cb.value);
+            });
+          } catch(e) {}
+
+          // Patologias
+          try {
+            const patologias = JSON.parse(a.historico_patologias || "[]");
+            document.querySelectorAll('input[name="anamnese-patologia"]').forEach(cb => {
+              cb.checked = patologias.includes(cb.value);
+            });
+          } catch(e) {}
+
+          // Questionário Médico
+          try {
+            const q = JSON.parse(a.questionario_medico || "{}");
+            ANAMNESE_PERGUNTAS.forEach((perg, idx) => {
+              const resp = q[perg];
+              if (resp) {
+                const rBtn = document.querySelector(`input[name="anamnese-perg-${idx}"][value="${resp.resposta}"]`);
+                if (rBtn) rBtn.checked = true;
+                if (resp.resposta === "Sim") {
+                  toggleAnamneseEspec(idx, true);
+                  document.getElementById(`anamnese-espec-${idx}`).value = resp.especifique || "";
+                }
+              }
+            });
+          } catch(e) {}
+
+          // Reação solar
+          if (a.reacao_solar) {
+            const reacaoRadio = document.querySelector(`input[name="anamnese-reacao-sol"][value="${a.reacao_solar}"]`);
+            if (reacaoRadio) reacaoRadio.checked = true;
+          }
+
+          document.getElementById('anamnese-sign-name').value = a.signature_name || c.name;
+          document.getElementById('anamnese-sign-date').value = a.signature_date || a.created_at;
+
+          if (a.signature_image) {
+            document.getElementById('anamnese-signature-img').src = a.signature_image;
+            document.getElementById('anamnese-signature-img-container').classList.remove('hidden');
+          } else {
+            document.getElementById('anamnese-signature-img').src = "";
+            document.getElementById('anamnese-signature-img-container').classList.add('hidden');
+          }
+        } else {
+          document.getElementById('anamnese-sign-name').value = c.name;
+          document.getElementById('anamnese-sign-date').value = new Date().toLocaleString('pt-BR');
+          document.getElementById('anamnese-signature-img').src = "";
+          document.getElementById('anamnese-signature-img-container').classList.add('hidden');
+        }
+
+        document.getElementById('modal-anamnese').classList.remove('hidden');
+      } catch (err) {
+        alert("Erro ao carregar ficha de anamnese.");
+      }
+    }
+
+    function closeAnamneseModal() {
+      document.getElementById('modal-anamnese').classList.add('hidden');
+    }
+
+    async function submitAnamnese(e) {
+      e.preventDefault();
+      const clientId = document.getElementById('anamnese-client-id').value;
+
+      // Coleta áreas marcadas
+      const selectedAreas = [];
+      document.querySelectorAll('input[name="anamnese-area"]:checked').forEach(cb => selectedAreas.push(cb.value));
+
+      // Coleta patologias
+      const selectedPat = [];
+      document.querySelectorAll('input[name="anamnese-patologia"]:checked').forEach(cb => selectedPat.push(cb.value));
+
+      // Coleta questionário médico
+      const questionario = {};
+      ANAMNESE_PERGUNTAS.forEach((perg, idx) => {
+        const checkedRadio = document.querySelector(`input[name="anamnese-perg-${idx}"]:checked`);
+        const resp = checkedRadio ? checkedRadio.value : "Não";
+        const espec = document.getElementById(`anamnese-espec-${idx}`)?.value || "";
+        questionario[perg] = { resposta: resp, especifique: espec };
+      });
+
+      const reacaoChecked = document.querySelector('input[name="anamnese-reacao-sol"]:checked');
+      const tipoTratChecked = document.querySelector('input[name="anamnese-tipo-trat"]:checked');
+      const sol48Checked = document.querySelector('input[name="anamnese-sol48"]:checked');
+
+      const payload = {
+        contract_number: document.getElementById('anamnese-contract').value.trim(),
+        sexo: document.getElementById('anamnese-sexo').value,
+        endereco: document.getElementById('anamnese-endereco').value.trim(),
+        bairro: document.getElementById('anamnese-bairro').value.trim(),
+        cep: document.getElementById('anamnese-cep').value.trim(),
+        cidade: document.getElementById('anamnese-cidade').value.trim(),
+        uf: document.getElementById('anamnese-uf').value.trim(),
+        tel_fixo: document.getElementById('anamnese-telfixo').value.trim(),
+        instagram: document.getElementById('anamnese-instagram').value.trim(),
+        profissao: document.getElementById('anamnese-profissao').value.trim(),
+        como_conheceu: document.getElementById('anamnese-conheceu').value,
+        tipo_tratamento: tipoTratChecked ? tipoTratChecked.value : "Depilação",
+        areas_tratamento: JSON.stringify(selectedAreas),
+        exposicao_sol_48h: sol48Checked ? sol48Checked.value : "Não",
+        historico_patologias: JSON.stringify(selectedPat),
+        questionario_medico: JSON.stringify(questionario),
+        reacao_solar: reacaoChecked ? reacaoChecked.value : "",
+        signature_name: document.getElementById('anamnese-sign-name').value.trim(),
+        signature_date: document.getElementById('anamnese-sign-date').value
+      };
+
+      try {
+        const res = await fetch(`/api/admin/clients/${clientId}/anamnese`, {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          alert("Erro ao salvar ficha de anamnese.");
+          return;
+        }
+
+        alert("✅ Ficha de Anamnese e Avaliação salva com sucesso!");
+        closeAnamneseModal();
+        loadClients();
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    // 3. CONTROLE DE PACOTES DE CLIENTES
+    async function loadClientPackages() {
+      try {
+        const res = await fetch('/api/admin/client-packages', { headers: getAdminHeaders() });
+        clientPackagesList = await res.json();
+        renderClientPackages(clientPackagesList);
+      } catch (err) {
+        console.error("Erro ao carregar pacotes de clientes", err);
+      }
+    }
+
+    function renderClientPackages(pkgs) {
+      const tbody = document.getElementById('client-packages-tbody');
+      if (pkgs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum pacote vendido ainda. Clique em "Vender Pacote para Cliente".</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pkgs.map(p => {
+        const remaining = p.total_sessions - p.completed_sessions;
+        const pct = Math.min(100, Math.round((p.completed_sessions / p.total_sessions) * 100));
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-4 px-4 font-bold text-slate-900">${p.client_name}</td>
+            <td class="py-4 px-4">
+              <div class="font-semibold text-slate-800">${p.service_name}</div>
+              <div class="text-[11px] text-slate-400">Valor Pago: R$ ${p.price_paid.toFixed(2).replace('.', ',')} (${p.payment_method})</div>
+            </td>
+            <td class="py-4 px-4 w-44">
+              <div class="text-xs font-bold text-slate-700 mb-1">${p.completed_sessions} de ${p.total_sessions} sessões (${pct}%)</div>
+              <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div class="bg-rose-500 h-full rounded-full transition-all" style="width: ${pct}%"></div>
+              </div>
+            </td>
+            <td class="py-4 px-4">
+              <span class="text-xs font-black ${remaining > 0 ? 'text-emerald-700 bg-emerald-100' : 'text-slate-500 bg-slate-100'} px-2.5 py-1 rounded-full">
+                ${remaining} restante(s)
+              </span>
+            </td>
+            <td class="py-4 px-4">
+              <span class="text-xs uppercase font-bold px-2 py-0.5 rounded-full ${p.status === 'ativo' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
+                ${p.status}
+              </span>
+            </td>
+            <td class="py-4 px-4 text-right">
+              ${remaining > 0 ? `
+                <button onclick="consumeSession(${p.id})" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5 ml-auto">
+                  <i class="fa-solid fa-check"></i> Baixar 1 Sessão
+                </button>
+              ` : `
+                <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-check-double text-emerald-500 mr-1"></i>Concluído</span>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function consumeSession(pkgId) {
+      if (!confirm("Confirmar a realização de 1 sessão deste pacote?")) return;
+      try {
+        const res = await fetch(`/api/admin/client-packages/${pkgId}/consume-session`, {
+          method: 'POST',
+          headers: getAdminHeaders()
+        });
+        if (res.ok) {
+          loadClientPackages();
+          loadAnalytics();
+        }
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    function openSellPackageModal() {
+      const clientSelect = document.getElementById('sell-pkg-client');
+      clientSelect.innerHTML = clientsList.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
+
+      const serviceSelect = document.getElementById('sell-pkg-service');
+      const packagesOnly = servicesList.filter(s => s.category === 'Pacote Promocional' || (s.sessions_count && s.sessions_count > 1));
+      serviceSelect.innerHTML = packagesOnly.map(s => `<option value="${s.id}" data-price="${s.price}">${s.name} - R$ ${s.price.toFixed(2)}</option>`).join('');
+
+      autoFillPackagePrice();
+      document.getElementById('modal-sell-package').classList.remove('hidden');
+    }
+
+    function autoFillPackagePrice() {
+      const serviceSelect = document.getElementById('sell-pkg-service');
+      const opt = serviceSelect.options[serviceSelect.selectedIndex];
+      if (opt && opt.getAttribute('data-price')) {
+        document.getElementById('sell-pkg-price').value = opt.getAttribute('data-price');
+      }
+    }
+
+    function closeSellPackageModal() {
+      document.getElementById('modal-sell-package').classList.add('hidden');
+    }
+
+    async function submitSellPackage(e) {
+      e.preventDefault();
+      const client_id = parseInt(document.getElementById('sell-pkg-client').value);
+      const service_id = parseInt(document.getElementById('sell-pkg-service').value);
+      const price_paid = parseFloat(document.getElementById('sell-pkg-price').value);
+      const payment_method = document.getElementById('sell-pkg-payment').value;
+
+      try {
+        const res = await fetch('/api/admin/client-packages', {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify({ client_id, service_id, price_paid, payment_method })
+        });
+        if (!res.ok) { alert("Erro ao registrar pacote."); return; }
+        closeSellPackageModal();
+        loadClientPackages();
+        loadCashFlow();
+        loadAnalytics();
+        alert("Pacote vendido e lançado no Fluxo de Caixa!");
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    // 4. FLUXO DE CAIXA
+    async function loadCashFlow() {
+      const month = document.getElementById('filter-cf-month').value;
+      let url = '/api/admin/cash-flow';
+      if (month) url += `?month=${month}`;
+
+      try {
+        const res = await fetch(url, { headers: getAdminHeaders() });
+        const data = await res.json();
+        
+        document.getElementById('cf-total-in').textContent = `R$ ${data.summary.total_entradas.toFixed(2).replace('.', ',')}`;
+        document.getElementById('cf-total-out').textContent = `R$ ${data.summary.total_saidas.toFixed(2).replace('.', ',')}`;
+        document.getElementById('cf-total-balance').textContent = `R$ ${data.summary.saldo_liquido.toFixed(2).replace('.', ',')}`;
+
+        const tbody = document.getElementById('cashflow-tbody');
+        if (data.transactions.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum lançamento no caixa neste período.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.transactions.map(t => {
+          const [y, m, d] = t.transaction_date.split('-');
+          const isIncome = t.type === 'entrada';
+
+          return `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="py-3.5 px-4 font-semibold text-slate-700 text-xs">${d}/${m}/${y}</td>
+              <td class="py-3.5 px-4">
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${isIncome ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                  ${isIncome ? 'Entrada (+)' : 'Saída (-)'}
+                </span>
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="font-bold text-slate-800">${t.description}</div>
+                <div class="text-[11px] text-slate-400">${t.category}</div>
+              </td>
+              <td class="py-3.5 px-4 text-xs text-slate-600">${t.payment_method}</td>
+              <td class="py-3.5 px-4 font-bold ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
+                ${isIncome ? '+' : '-'} R$ ${t.amount.toFixed(2).replace('.', ',')}
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <button onclick="deleteCashFlow(${t.id})" class="text-slate-400 hover:text-rose-600 p-1.5 transition">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("Erro ao carregar fluxo de caixa", err);
+      }
+    }
+
+    function openCashFlowModal(type) {
+      document.getElementById('cf-type').value = type;
+      document.getElementById('cf-date').value = new Date().toISOString().split('T')[0];
+      const catSelect = document.getElementById('cf-category');
+      
+      if (type === 'entrada') {
+        document.getElementById('modal-cf-title').textContent = "Novo Recebimento (Entrada)";
+        document.getElementById('btn-cf-save').className = "px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition shadow-md shadow-emerald-200";
+        catSelect.innerHTML = `
+          <option value="Venda de Pacote">Venda de Pacote</option>
+          <option value="Sessão Avulsa">Sessão Avulsa</option>
+          <option value="Produtos / Pós-Laser">Produtos / Pós-Laser</option>
+          <option value="Outros Recebimentos">Outros Recebimentos</option>
+        `;
+      } else {
+        document.getElementById('modal-cf-title').textContent = "Nova Despesa (Saída)";
+        document.getElementById('btn-cf-save').className = "px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-sm font-semibold transition shadow-md shadow-pink-200";
+        catSelect.innerHTML = `
+          <option value="Insumos / Gel & Descartáveis">Insumos (Gel Condutor, Luvas, Descartáveis)</option>
+          <option value="Aluguel / Manutenção Laser">Aluguel / Manutenção da Máquina de Laser</option>
+          <option value="Energia Elétrica / Água">Energia Elétrica / Água</option>
+          <option value="Marketing / Anúncios">Marketing / Instagram Ads</option>
+          <option value="Outras Despesas">Outras Despesas</option>
+        `;
+      }
+      document.getElementById('modal-cashflow').classList.remove('hidden');
+    }
+
+    function closeCashFlowModal() {
+      document.getElementById('modal-cashflow').classList.add('hidden');
+    }
+
+    async function submitCashFlow(e) {
+      e.preventDefault();
+      const payload = {
+        type: document.getElementById('cf-type').value,
+        category: document.getElementById('cf-category').value,
+        description: document.getElementById('cf-description').value.trim(),
+        amount: parseFloat(document.getElementById('cf-amount').value),
+        payment_method: document.getElementById('cf-payment').value,
+        transaction_date: document.getElementById('cf-date').value
+      };
+
+      try {
+        const res = await fetch('/api/admin/cash-flow', {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) { alert("Erro ao lançar no caixa."); return; }
+        closeCashFlowModal();
+        loadCashFlow();
+        loadAnalytics();
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    async function deleteCashFlow(id) {
+      if (!confirm("Excluir este lançamento do caixa?")) return;
+      try {
+        await fetch(`/api/admin/cash-flow/${id}`, { method: 'DELETE', headers: getAdminHeaders() });
+        loadCashFlow();
+        loadAnalytics();
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    // 5. INTELIGÊNCIA & RETENÇÃO (EVITAR PERDA DE CLIENTES)
+    async function loadAnalytics() {
+      try {
+        const res = await fetch('/api/admin/analytics', { headers: getAdminHeaders() });
+        const data = await res.json();
+
+        // Cards Superiores
+        document.getElementById('stat-total-revenue').textContent = `R$ ${data.metrics.total_revenue.toFixed(2).replace('.', ',')}`;
+        document.getElementById('stat-ticket-medio').textContent = `R$ ${data.metrics.ticket_medio_cliente.toFixed(2).replace('.', ',')}`;
+        document.getElementById('stat-at-risk').textContent = data.metrics.at_risk_count;
+        document.getElementById('stat-renewal-opps').textContent = data.metrics.renewal_count;
+        document.getElementById('stat-noshow-rate').textContent = `${data.metrics.no_show_rate}%`;
+
+        document.getElementById('badge-at-risk-count').textContent = `${data.metrics.at_risk_count} em risco`;
+        document.getElementById('badge-renewal-count').textContent = `${data.metrics.renewal_count} prontos`;
+
+        // Clientes em Risco
+        const atRiskBox = document.getElementById('analytics-at-risk-container');
+        if (data.at_risk_clients.length === 0) {
+          atRiskBox.innerHTML = `<div class="p-4 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold text-center">🎉 Parabéns! Todos os clientes estão com as sessões em dia (menos de 30 dias).</div>`;
+        } else {
+          atRiskBox.innerHTML = data.at_risk_clients.map(c => `
+            <div class="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-xl flex items-center justify-between">
+              <div>
+                <div class="font-bold text-slate-800 text-sm">${c.name}</div>
+                <div class="text-xs text-rose-600 font-semibold"><i class="fa-solid fa-clock-rotate-left mr-1"></i>${c.days_inactive} dias sem fazer sessão</div>
+              </div>
+              <button onclick="sendReengagementWhatsApp('${c.name}', '${c.phone}')" class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-brands fa-whatsapp"></i> Chamar de Volta
+              </button>
+            </div>
+          `).join('');
+        }
+
+        // Oportunidades de Renovação
+        const renewalBox = document.getElementById('analytics-renewal-container');
+        if (data.renewal_opportunities.length === 0) {
+          renewalBox.innerHTML = `<div class="p-4 bg-slate-50 text-slate-500 rounded-xl text-xs text-center">Nenhum pacote próximo ao fim no momento.</div>`;
+        } else {
+          renewalBox.innerHTML = data.renewal_opportunities.map(p => `
+            <div class="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-xl flex items-center justify-between">
+              <div>
+                <div class="font-bold text-slate-800 text-sm">${p.name}</div>
+                <div class="text-xs text-slate-600 font-medium">${p.service_name} (${p.completed_sessions} de ${p.total_sessions} sessões)</div>
+              </div>
+              <button onclick="sendRenewalWhatsApp('${p.name}', '${p.phone}', '${p.service_name}')" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+                <i class="fa-brands fa-whatsapp"></i> Ofertar Renovação
+              </button>
+            </div>
+          `).join('');
+        }
+
+        // Top Serviços
+        const topTbody = document.getElementById('analytics-top-services-tbody');
+        topTbody.innerHTML = data.top_services.map(s => `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-3 px-4 font-bold text-slate-800">${s.name}</td>
+            <td class="py-3 px-4 font-semibold text-slate-600">${s.total_bookings} agendamentos</td>
+            <td class="py-3 px-4 font-bold text-emerald-600">R$ ${(s.generated_revenue || 0).toFixed(2).replace('.', ',')}</td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        console.error("Erro ao carregar analytics", err);
+      }
+    }
+
+    function sendReengagementWhatsApp(name, phone) {
+      const msg = encodeURIComponent(`Olá ${name}! Tudo bem?\n\nNotamos aqui na LaserGlow Clinic que já faz mais de 30 dias desde a sua última sessão de depilação a laser. Para garantir que os pelos não voltem a crescer e o resultado seja definitivo, o ideal é não deixar passar esse intervalo!\n\nVamos agendar sua próxima sessão essa semana? Qual dia fica melhor para você? ✨`);
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+      window.open(`https://web.whatsapp.com/send?phone=${cleanPhone}&text=${msg}`, '_blank');
+    }
+
+    function sendRenewalWhatsApp(name, phone, service) {
+      const msg = encodeURIComponent(`Olá ${name}! Tudo bem?\n\nPassando para avisar que seu pacote de *${service}* está chegando na reta final! Parabéns pelo resultado até aqui!\n\nEstamos com uma condição especial de *renovação / manutenção anual* com desconto exclusivo para quem já é nossa cliente. Gostaria de garantir seu plano com esse desconto especial? ✨`);
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+      window.open(`https://web.whatsapp.com/send?phone=${cleanPhone}&text=${msg}`, '_blank');
+    }
+
+    // 6. CATÁLOGO DE PREÇOS E SERVIÇOS
     async function loadServices() {
       try {
         const res = await fetch('/api/services');
         servicesList = await res.json();
         renderPackagesTable(servicesList);
       } catch (err) {
-        console.error("Erro ao carregar pacotes", err);
+        console.error("Erro ao carregar catálogo", err);
       }
     }
 
@@ -866,33 +2240,23 @@
     async function submitEditService(e) {
       e.preventDefault();
       const serviceId = document.getElementById('edit-service-id').value;
-      const name = document.getElementById('edit-service-name').value.trim();
-      const category = document.getElementById('edit-service-category').value;
-      const sessions_count = parseInt(document.getElementById('edit-service-sessions').value) || 1;
-      const duration_minutes = parseInt(document.getElementById('edit-service-duration').value) || 30;
-      const price = parseFloat(document.getElementById('edit-service-price').value);
+      const payload = {
+        name: document.getElementById('edit-service-name').value.trim(),
+        category: document.getElementById('edit-service-category').value,
+        sessions_count: parseInt(document.getElementById('edit-service-sessions').value) || 1,
+        duration_minutes: parseInt(document.getElementById('edit-service-duration').value) || 30,
+        price: parseFloat(document.getElementById('edit-service-price').value)
+      };
 
       try {
         const res = await fetch(`/api/admin/services/${serviceId}`, {
           method: 'PUT',
           headers: getAdminHeaders(),
-          body: JSON.stringify({
-            name,
-            category,
-            sessions_count,
-            duration_minutes,
-            price
-          })
+          body: JSON.stringify(payload)
         });
-
-        if (!res.ok) {
-          alert("Erro ao salvar alterações do pacote.");
-          return;
-        }
-
+        if (!res.ok) { alert("Erro ao salvar alterações."); return; }
         closeEditServiceModal();
         loadServices();
-        alert("Pacote/Procedimento atualizado com sucesso!");
       } catch (err) {
         alert("Erro na conexão.");
       }
@@ -900,80 +2264,123 @@
 
     async function handleCreateService(e) {
       e.preventDefault();
-      const name = document.getElementById('new-service-name').value.trim();
-      const category = document.getElementById('new-service-category').value;
-      const sessions_count = parseInt(document.getElementById('new-service-sessions').value) || 1;
-      const price = parseFloat(document.getElementById('new-service-price').value);
+      const payload = {
+        name: document.getElementById('new-service-name').value.trim(),
+        category: document.getElementById('new-service-category').value,
+        sessions_count: parseInt(document.getElementById('new-service-sessions').value) || 1,
+        duration_minutes: 30,
+        price: parseFloat(document.getElementById('new-service-price').value)
+      };
 
       try {
         const res = await fetch('/api/admin/services', {
           method: 'POST',
           headers: getAdminHeaders(),
-          body: JSON.stringify({
-            name,
-            category,
-            sessions_count,
-            duration_minutes: 30,
-            price
-          })
+          body: JSON.stringify(payload)
         });
-
-        if (!res.ok) {
-          alert("Erro ao cadastrar pacote.");
-          return;
-        }
-
+        if (!res.ok) { alert("Erro ao criar pacote."); return; }
         document.getElementById('form-create-service').reset();
         loadServices();
-        alert("Pacote/Procedimento cadastrado com sucesso!");
       } catch (err) {
         alert("Erro na conexão.");
       }
     }
 
     async function deleteService(serviceId) {
-      if (!confirm("Tem certeza que deseja excluir este pacote do catálogo?")) return;
+      if (!confirm("Tem certeza que deseja excluir do catálogo?")) return;
       try {
-        const res = await fetch(`/api/admin/services/${serviceId}`, {
-          method: 'DELETE',
-          headers: getAdminHeaders()
-        });
-        if (res.ok) {
-          loadServices();
-        } else {
-          alert("Erro ao excluir.");
-        }
+        await fetch(`/api/admin/services/${serviceId}`, { method: 'DELETE', headers: getAdminHeaders() });
+        loadServices();
       } catch (err) {
         alert("Erro na conexão.");
       }
     }
 
-    function filterClientTable() {
-      const term = document.getElementById('search-client').value.toLowerCase();
-      const filtered = clientsList.filter(c => c.name.toLowerCase().includes(term) || c.phone.includes(term));
-      renderClients(filtered);
-    }
-
-    function updateKPIs(apps) {
-      document.getElementById('stat-total-apps').textContent = apps.length;
-      document.getElementById('stat-pending-apps').textContent = apps.filter(a => a.status === 'agendado').length;
-      document.getElementById('stat-confirmed-apps').textContent = apps.filter(a => a.status === 'confirmado').length;
-    }
-
-    async function updateStatus(appId, newStatus) {
+    // 7. CONFIGURAÇÕES & LOGO
+    async function loadClinicSettings() {
       try {
-        await fetch(`/api/appointments/${appId}/status`, {
-          method: 'PUT',
-          headers: getAdminHeaders(),
-          body: JSON.stringify({ status: newStatus })
-        });
-        loadAppointments();
+        const res = await fetch('/api/settings');
+        const settings = await res.json();
+        if (settings.name) {
+          document.getElementById('admin-display-name').textContent = settings.name;
+          document.getElementById('setting-name').value = settings.name;
+        }
+        if (settings.subtitle) document.getElementById('setting-subtitle').value = settings.subtitle;
+        if (settings.phone) document.getElementById('setting-phone').value = settings.phone;
+        if (settings.instagram) document.getElementById('setting-instagram').value = settings.instagram;
+
+        const logoUrl = settings.logo_url || '';
+        document.getElementById('setting-logo-url').value = logoUrl;
+        updateLogoPreviews(logoUrl);
       } catch (err) {
-        alert("Erro ao atualizar status.");
+        console.error("Erro ao carregar configurações", err);
       }
     }
 
-    // Modal Reagendamento
+    function updateLogoPreviews(url) {
+      const adminImg = document.getElementById('admin-logo-img');
+      const adminIcon = document.getElementById('admin-logo-icon');
+      const prevImg = document.getElementById('preview-logo-img');
+      const prevIcon = document.getElementById('preview-logo-icon');
+
+      if (url) {
+        adminImg.src = url; adminImg.classList.remove('hidden'); adminIcon.classList.add('hidden');
+        prevImg.src = url; prevImg.classList.remove('hidden'); prevIcon.classList.add('hidden');
+      } else {
+        adminImg.classList.add('hidden'); adminIcon.classList.remove('hidden');
+        prevImg.classList.add('hidden'); prevIcon.classList.remove('hidden');
+      }
+    }
+
+    async function handleLogoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/admin/upload-logo', {
+          method: 'POST',
+          headers: { 'x-admin-pin': adminToken || '' },
+          body: formData
+        });
+        if (!res.ok) { alert("Erro ao enviar logotipo."); return; }
+        const data = await res.json();
+        document.getElementById('setting-logo-url').value = data.logo_url;
+        updateLogoPreviews(data.logo_url);
+        alert("Logotipo atualizado!");
+      } catch (err) { alert("Erro no upload."); }
+    }
+
+    function removeLogo() {
+      document.getElementById('setting-logo-url').value = '';
+      updateLogoPreviews('');
+    }
+
+    async function saveClinicSettings(e) {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('setting-name').value.trim(),
+        subtitle: document.getElementById('setting-subtitle').value.trim(),
+        logo_url: document.getElementById('setting-logo-url').value.trim(),
+        phone: document.getElementById('setting-phone').value.trim(),
+        instagram: document.getElementById('setting-instagram').value.trim()
+      };
+
+      try {
+        const res = await fetch('/api/admin/settings', {
+          method: 'PUT',
+          headers: getAdminHeaders(),
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          document.getElementById('admin-display-name').textContent = payload.name;
+          alert("Dados da clínica salvos com sucesso!");
+        }
+      } catch (err) { alert("Erro na conexão."); }
+    }
+
+    // MODAL REAGENDAMENTO
     function openRescheduleModal(appId) {
       const app = appointmentsList.find(a => a.id === appId);
       if (!app) return;
@@ -987,9 +2394,7 @@
       document.getElementById('modal-reschedule').classList.remove('hidden');
     }
 
-    document.getElementById('reschedule-date').addEventListener('change', (e) => {
-      loadRescheduleSlots(e.target.value);
-    });
+    document.getElementById('reschedule-date').addEventListener('change', (e) => loadRescheduleSlots(e.target.value));
 
     async function loadRescheduleSlots(date) {
       const container = document.getElementById('reschedule-slots');
@@ -1035,41 +2440,38 @@
         const res = await fetch(`/api/appointments/${appId}/reschedule`, {
           method: 'PUT',
           headers: getAdminHeaders(),
-          body: JSON.stringify({
-            appointment_date: newDate,
-            appointment_time: selectedRescheduleTime
-          })
+          body: JSON.stringify({ appointment_date: newDate, appointment_time: selectedRescheduleTime })
         });
-
-        if (!res.ok) {
-          const err = await res.json();
-          alert(err.detail || "Erro ao reagendar.");
-          return;
-        }
-
+        if (!res.ok) { alert("Erro ao reagendar."); return; }
         closeRescheduleModal();
         loadAppointments();
         alert("Agendamento remarcado com sucesso!");
-      } catch (err) {
-        alert("Erro na conexão.");
-      }
+      } catch (err) { alert("Erro na conexão."); }
     }
 
     function closeRescheduleModal() {
       document.getElementById('modal-reschedule').classList.add('hidden');
     }
 
-    // Modal WhatsApp
+    async function updateStatus(appId, newStatus) {
+      try {
+        await fetch(`/api/appointments/${appId}/status`, {
+          method: 'PUT',
+          headers: getAdminHeaders(),
+          body: JSON.stringify({ status: newStatus })
+        });
+        loadAppointments();
+        loadAnalytics();
+      } catch (err) { alert("Erro ao atualizar status."); }
+    }
+
+    // MODAL WHATSAPP
     function openWhatsAppModalForApp(appId) {
       const app = appointmentsList.find(a => a.id === appId);
       if (!app) return;
       const [y, m, d] = app.appointment_date.split('-');
       currentModalData = {
-        name: app.client_name,
-        phone: app.client_phone,
-        service: app.service_name,
-        date: `${d}/${m}/${y}`,
-        time: app.appointment_time
+        name: app.client_name, phone: app.client_phone, service: app.service_name, date: `${d}/${m}/${y}`, time: app.appointment_time
       };
       document.getElementById('whatsapp-modal-target').textContent = `Para: ${app.client_name} (${app.client_phone})`;
       applyTemplate('reminder');
@@ -1078,15 +2480,21 @@
 
     function openWhatsAppModalForClient(name, phone) {
       currentModalData = {
-        name: name,
-        phone: phone,
-        service: 'sua sessão de depilação a laser',
-        date: 'em breve',
-        time: ''
+        name, phone, service: 'sua sessão de depilação a laser', date: 'em breve', time: ''
       };
       document.getElementById('whatsapp-modal-target').textContent = `Para: ${name} (${phone})`;
       applyTemplate('reschedule');
       document.getElementById('modal-whatsapp').classList.remove('hidden');
+    }
+
+    function sendFichaLinkToClient(name, phone) {
+      const origin = window.location.origin;
+      const link = `${origin}/ficha?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`;
+      const clinicName = document.getElementById('admin-display-name').textContent || 'LaserGlow Clinic';
+      const text = encodeURIComponent(`Olá ${name}! Tudo bem?\n\nPara agilizar o seu atendimento na ${clinicName}, por favor preencha sua Ficha Cadastral e assine o termo digitalmente pelo link abaixo:\n\n👉 ${link}\n\nLeva menos de 2 minutinhos e você pode assinar diretamente na tela do seu celular com o dedo! ✨`);
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
+      window.open(`https://web.whatsapp.com/send?phone=${cleanPhone}&text=${text}`, '_blank');
     }
 
     function applyTemplate(type) {
@@ -1098,7 +2506,7 @@
       } else if (type === 'confirm') {
         text = `Olá ${name}! Tudo bem?\n\nPrecisamos confirmar seu atendimento de *${service}* no dia *${date}* às *${time}*.\n\nDigite *1* para Confirmar ou *2* caso precise de reagendamento. Aguardo seu retorno! ✨`;
       } else if (type === 'reschedule') {
-        text = `Olá ${name}! Tudo bem?\n\nEstamos entrando em contato sobre sua sessão de *${service}*. Gostaria de verificar a possibilidade de reagendamento ou agendar novas sessões de depilação a laser?\n\nQual o melhor dia e período para você?`;
+        text = `Olá ${name}! Tudo bem?\n\nEstamos entrando em contato sobre sua sessão de *${service}*. Gostaria de verificar a possibilidade de agendar ou reagendar sua sessão?\n\nQual o melhor dia e período para você?`;
       } else if (type === 'care') {
         text = `Olá ${name}! ✨ Dicas essenciais para o seu laser no dia *${date}*:\n\n1. Raspar a área com lâmina 1 dia antes da sessão;\n2. Não tomar sol na região tratada;\n3. Não utilizar cera nem pinça.\n\nQualquer dúvida estamos à disposição! Até logo!`;
       }
@@ -1109,16 +2517,21 @@
       if (!currentModalData) return;
       const text = encodeURIComponent(document.getElementById('whatsapp-text').value);
       let phone = currentModalData.phone.replace(/\D/g, '');
-      if (phone.length <= 11 && !phone.startsWith('55')) {
-        phone = '55' + phone;
-      }
-      const url = `https://web.whatsapp.com/send?phone=${phone}&text=${text}`;
-      window.open(url, '_blank');
+      if (phone.length <= 11 && !phone.startsWith('55')) phone = '55' + phone;
+      window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${text}`, '_blank');
       closeWhatsAppModal();
     }
 
     function closeWhatsAppModal() {
       document.getElementById('modal-whatsapp').classList.add('hidden');
+    }
+
+    function filterClientTable() {
+      const term = document.getElementById('search-client').value.toLowerCase();
+      const filtered = clientsList.filter(c => 
+        c.name.toLowerCase().includes(term) || c.phone.includes(term) || (c.cpf && c.cpf.includes(term))
+      );
+      renderClients(filtered);
     }
 
     function clearFilters() {
@@ -1129,6 +2542,481 @@
 
     document.getElementById('filter-date').addEventListener('change', loadAppointments);
     document.getElementById('filter-status').addEventListener('change', loadAppointments);
+
+    // 8. RELATÓRIOS & IMPRESSÃO
+    let currentReportType = 'appointments';
+
+    function printAnamneseModal() {
+      document.body.classList.add('printing-anamnese-mode');
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-anamnese-mode');
+      }, 1000);
+    }
+
+    function printReport() {
+      document.body.classList.add('printing-report-mode');
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove('printing-report-mode');
+      }, 1000);
+    }
+
+    function quickPrintReport(type) {
+      switchTab('reports');
+      selectReportType(type);
+      if (type === 'appointments' && document.getElementById('filter-date').value) {
+        document.getElementById('report-start-date').value = document.getElementById('filter-date').value;
+        document.getElementById('report-end-date').value = document.getElementById('filter-date').value;
+        generateReport();
+      } else if (type === 'cashflow' && document.getElementById('filter-cf-month').value) {
+        const m = document.getElementById('filter-cf-month').value;
+        document.getElementById('report-start-date').value = `${m}-01`;
+        const [yr, mn] = m.split('-').map(Number);
+        const lastDay = new Date(yr, mn, 0).getDate();
+        document.getElementById('report-end-date').value = `${m}-${lastDay < 10 ? '0' + lastDay : lastDay}`;
+        generateReport();
+      }
+      setTimeout(() => {
+        printReport();
+      }, 400);
+    }
+
+    function initReportsTab() {
+      const name = document.getElementById('setting-name').value || "LaserGlow Clinic";
+      const sub = document.getElementById('setting-subtitle').value || "Clínica Especializada em Depilação a Laser e Estética Avançada";
+      const phone = document.getElementById('setting-phone').value || "(11) 98765-4321";
+      const logoUrl = document.getElementById('setting-logo-url').value;
+
+      document.getElementById('report-header-clinic-name').textContent = name;
+      document.getElementById('report-header-clinic-sub').textContent = sub;
+      document.getElementById('report-header-clinic-contact').textContent = `WhatsApp / Atendimento: ${phone}`;
+
+      const logoImg = document.getElementById('report-header-logo-img');
+      const logoIcon = document.getElementById('report-header-logo-icon');
+      if (logoUrl) {
+        logoImg.src = logoUrl;
+        logoImg.classList.remove('hidden');
+        logoIcon.classList.add('hidden');
+      } else {
+        logoImg.classList.add('hidden');
+        logoIcon.classList.remove('hidden');
+      }
+
+      if (!document.getElementById('report-start-date').value) {
+        setReportPeriod('this-month');
+      } else {
+        generateReport();
+      }
+    }
+
+    function selectReportType(type) {
+      currentReportType = type;
+      document.querySelectorAll('.report-type-btn').forEach(btn => {
+        btn.className = "report-type-btn p-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs flex flex-col items-center gap-1.5 transition";
+      });
+      const activeBtn = document.getElementById(`report-tab-${type}`);
+      if (activeBtn) {
+        activeBtn.className = "report-type-btn p-3 rounded-xl border border-rose-500 bg-rose-50/50 text-rose-700 font-bold text-xs flex flex-col items-center gap-1.5 transition";
+      }
+      generateReport();
+    }
+
+    function setReportPeriod(period) {
+      const today = new Date();
+      const formatDate = (d) => {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
+      if (period === 'today') {
+        const tStr = formatDate(today);
+        document.getElementById('report-start-date').value = tStr;
+        document.getElementById('report-end-date').value = tStr;
+      } else if (period === 'this-week') {
+        const curr = new Date();
+        const first = new Date(curr.setDate(curr.getDate() - curr.getDay() + 1));
+        const last = new Date(curr.setDate(curr.getDate() - curr.getDay() + 7));
+        document.getElementById('report-start-date').value = formatDate(first);
+        document.getElementById('report-end-date').value = formatDate(last);
+      } else if (period === 'this-month') {
+        const y = today.getFullYear();
+        const m = today.getMonth();
+        const first = new Date(y, m, 1);
+        const last = new Date(y, m + 1, 0);
+        document.getElementById('report-start-date').value = formatDate(first);
+        document.getElementById('report-end-date').value = formatDate(last);
+      } else if (period === 'all') {
+        document.getElementById('report-start-date').value = '';
+        document.getElementById('report-end-date').value = '';
+      }
+      generateReport();
+    }
+
+    async function generateReport() {
+      const now = new Date();
+      const d = String(now.getDate()).padStart(2, '0');
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const y = now.getFullYear();
+      const hr = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('report-emission-date').textContent = `Emitido em: ${d}/${m}/${y} às ${hr}:${min}`;
+
+      const sDate = document.getElementById('report-start-date').value;
+      const eDate = document.getElementById('report-end-date').value;
+      let periodLabel = 'Todo o Histórico';
+      if (sDate && eDate) {
+        const [sy, sm, sd] = sDate.split('-');
+        const [ey, em, ed] = eDate.split('-');
+        periodLabel = sDate === eDate ? `${sd}/${sm}/${sy}` : `${sd}/${sm}/${sy} até ${ed}/${em}/${ey}`;
+      } else if (sDate) {
+        const [sy, sm, sd] = sDate.split('-');
+        periodLabel = `A partir de ${sd}/${sm}/${sy}`;
+      }
+      document.getElementById('report-period-text').textContent = `Período: ${periodLabel}`;
+
+      const titleEl = document.getElementById('report-title-display');
+      const descEl = document.getElementById('report-desc-display');
+      const countEl = document.getElementById('report-count-badge');
+      const cardsEl = document.getElementById('report-summary-cards');
+      const theadEl = document.getElementById('report-table-head');
+      const tbodyEl = document.getElementById('report-table-body');
+
+      // 1. APPOINTMENTS
+      if (currentReportType === 'appointments') {
+        titleEl.textContent = "RELATÓRIO DE ATENDIMENTOS & AGENDA";
+        descEl.textContent = "Demonstrativo detalhado dos procedimentos agendados, confirmados e realizados";
+
+        let filtered = [...appointmentsList];
+        if (sDate) filtered = filtered.filter(a => a.appointment_date >= sDate);
+        if (eDate) filtered = filtered.filter(a => a.appointment_date <= eDate);
+        filtered.sort((a,b) => `${a.appointment_date} ${a.appointment_time}`.localeCompare(`${b.appointment_date} ${b.appointment_time}`));
+
+        const total = filtered.length;
+        const concluidos = filtered.filter(a => a.status === 'concluido').length;
+        const confirmados = filtered.filter(a => a.status === 'confirmado').length;
+        const cancelados = filtered.filter(a => a.status === 'cancelado').length;
+        const totalReceita = filtered.filter(a => a.status !== 'cancelado').reduce((acc, a) => acc + (a.service_price || 0), 0);
+
+        countEl.textContent = `${total} atendimentos`;
+        cardsEl.innerHTML = `
+          <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Total Agendados</span>
+            <div class="text-xl font-extrabold text-slate-900 mt-0.5">${total}</div>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-emerald-700">Concluídos / Realizados</span>
+            <div class="text-xl font-extrabold text-emerald-700 mt-0.5">${concluidos}</div>
+          </div>
+          <div class="bg-teal-50 border border-teal-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-teal-700">Confirmados</span>
+            <div class="text-xl font-extrabold text-teal-700 mt-0.5">${confirmados}</div>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-indigo-700">Previsão Faturamento</span>
+            <div class="text-xl font-extrabold text-indigo-800 mt-0.5">R$ ${totalReceita.toFixed(2).replace('.', ',')}</div>
+          </div>
+        `;
+
+        theadEl.innerHTML = `
+          <tr>
+            <th class="py-2.5 px-3">Data & Hora</th>
+            <th class="py-2.5 px-3">Paciente / Cliente</th>
+            <th class="py-2.5 px-3">WhatsApp</th>
+            <th class="py-2.5 px-3">Procedimento / Área</th>
+            <th class="py-2.5 px-3">Valor</th>
+            <th class="py-2.5 px-3">Status</th>
+            <th class="py-2.5 px-3 text-center">Visto / Assinatura</th>
+          </tr>
+        `;
+
+        if (filtered.length === 0) {
+          tbodyEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">Nenhum atendimento encontrado para o período.</td></tr>`;
+        } else {
+          tbodyEl.innerHTML = filtered.map(a => {
+            const [y, m, d] = a.appointment_date.split('-');
+            return `
+              <tr class="border-b border-slate-100 hover:bg-slate-50/60">
+                <td class="py-2.5 px-3 font-semibold text-slate-900 whitespace-nowrap">${d}/${m}/${y} ${a.appointment_time}</td>
+                <td class="py-2.5 px-3 font-bold text-slate-800">${a.client_name}</td>
+                <td class="py-2.5 px-3 text-slate-600">${a.client_phone}</td>
+                <td class="py-2.5 px-3 font-medium text-slate-700">${a.service_name}</td>
+                <td class="py-2.5 px-3 font-semibold text-emerald-700">R$ ${(a.service_price || 0).toFixed(2).replace('.', ',')}</td>
+                <td class="py-2.5 px-3 uppercase text-[10px] font-bold">${a.status}</td>
+                <td class="py-2.5 px-3 text-center text-slate-300">_________________</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // 2. CASHFLOW (FECHAMENTO DE CAIXA)
+      else if (currentReportType === 'cashflow') {
+        titleEl.textContent = "RELATÓRIO FINANCEIRO & FECHAMENTO DE CAIXA";
+        descEl.textContent = "Extrato analítico de receitas, despesas, saldos e formas de pagamento";
+
+        let url = '/api/admin/cash-flow';
+        const res = await fetch(url, { headers: getAdminHeaders() });
+        const cfData = await res.json();
+        let txs = cfData.transactions || [];
+
+        if (sDate) txs = txs.filter(t => t.transaction_date >= sDate);
+        if (eDate) txs = txs.filter(t => t.transaction_date <= eDate);
+        txs.sort((a,b) => b.transaction_date.localeCompare(a.transaction_date));
+
+        const totalIn = txs.filter(t => t.type === 'entrada').reduce((acc, t) => acc + t.amount, 0);
+        const totalOut = txs.filter(t => t.type === 'saida').reduce((acc, t) => acc + t.amount, 0);
+        const saldo = totalIn - totalOut;
+
+        const payMap = {};
+        txs.filter(t => t.type === 'entrada').forEach(t => {
+          payMap[t.payment_method] = (payMap[t.payment_method] || 0) + t.amount;
+        });
+        const payBreakdown = Object.entries(payMap).map(([k,v]) => `${k}: R$ ${v.toFixed(2).replace('.', ',')}`).join(' | ') || 'Nenhum recebimento';
+
+        countEl.textContent = `${txs.length} lançamentos`;
+        cardsEl.innerHTML = `
+          <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-emerald-700">Total de Entradas</span>
+            <div class="text-xl font-extrabold text-emerald-700 mt-0.5">R$ ${totalIn.toFixed(2).replace('.', ',')}</div>
+          </div>
+          <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-rose-700">Total de Despesas</span>
+            <div class="text-xl font-extrabold text-rose-700 mt-0.5">R$ ${totalOut.toFixed(2).replace('.', ',')}</div>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-indigo-700">Saldo Líquido</span>
+            <div class="text-xl font-extrabold ${saldo >= 0 ? 'text-indigo-800' : 'text-rose-700'} mt-0.5">R$ ${saldo.toFixed(2).replace('.', ',')}</div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Lançamentos</span>
+            <div class="text-xl font-extrabold text-slate-800 mt-0.5">${txs.length}</div>
+          </div>
+          <div class="col-span-2 sm:col-span-4 bg-slate-50 p-2.5 rounded-xl border text-[11px] text-slate-600 font-medium">
+            <strong>Entradas por Forma de Pagamento:</strong> ${payBreakdown}
+          </div>
+        `;
+
+        theadEl.innerHTML = `
+          <tr>
+            <th class="py-2.5 px-3">Data</th>
+            <th class="py-2.5 px-3">Tipo</th>
+            <th class="py-2.5 px-3">Categoria / Descrição</th>
+            <th class="py-2.5 px-3">Forma Pagamento</th>
+            <th class="py-2.5 px-3 text-right">Valor (R$)</th>
+          </tr>
+        `;
+
+        if (txs.length === 0) {
+          tbodyEl.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Nenhum lançamento contábil no período.</td></tr>`;
+        } else {
+          tbodyEl.innerHTML = txs.map(t => {
+            const [y, m, d] = t.transaction_date.split('-');
+            const isEntry = t.type === 'entrada';
+            return `
+              <tr class="border-b border-slate-100 hover:bg-slate-50/60">
+                <td class="py-2.5 px-3 font-semibold text-slate-800">${d}/${m}/${y}</td>
+                <td class="py-2.5 px-3 uppercase text-[10px] font-bold ${isEntry ? 'text-emerald-700' : 'text-rose-700'}">${t.type}</td>
+                <td class="py-2.5 px-3 font-medium text-slate-800">
+                  <span>${t.category}</span>
+                  ${t.description ? `<span class="text-slate-400 text-[11px]"> - ${t.description}</span>` : ''}
+                </td>
+                <td class="py-2.5 px-3 text-slate-600">${t.payment_method}</td>
+                <td class="py-2.5 px-3 text-right font-black ${isEntry ? 'text-emerald-700' : 'text-rose-700'}">
+                  ${isEntry ? '+' : '-'} R$ ${t.amount.toFixed(2).replace('.', ',')}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // 3. PACKAGES (CONTROLE DE PACOTES)
+      else if (currentReportType === 'packages') {
+        titleEl.textContent = "RELATÓRIO DE PACOTES & SESSÕES DE CLIENTES";
+        descEl.textContent = "Acompanhamento de sessões contratadas, realizadas, pendentes e taxas de conclusão";
+
+        let pkgs = [...clientPackagesList];
+        const totalPkgs = pkgs.length;
+        const totalSessoes = pkgs.reduce((acc, p) => acc + (p.total_sessions || 0), 0);
+        const concluidas = pkgs.reduce((acc, p) => acc + (p.completed_sessions || 0), 0);
+        const pendentes = totalSessoes - concluidas;
+
+        countEl.textContent = `${totalPkgs} pacotes ativos`;
+        cardsEl.innerHTML = `
+          <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-indigo-700">Total Pacotes Vendidos</span>
+            <div class="text-xl font-extrabold text-indigo-800 mt-0.5">${totalPkgs}</div>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-emerald-700">Sessões Realizadas</span>
+            <div class="text-xl font-extrabold text-emerald-700 mt-0.5">${concluidas}</div>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-amber-700">Sessões Pendentes</span>
+            <div class="text-xl font-extrabold text-amber-700 mt-0.5">${pendentes}</div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Volume Total Contratado</span>
+            <div class="text-xl font-extrabold text-slate-800 mt-0.5">${totalSessoes} sessões</div>
+          </div>
+        `;
+
+        theadEl.innerHTML = `
+          <tr>
+            <th class="py-2.5 px-3">Cliente</th>
+            <th class="py-2.5 px-3">Pacote / Procedimento</th>
+            <th class="py-2.5 px-3">Sessões Realizadas</th>
+            <th class="py-2.5 px-3">Restantes</th>
+            <th class="py-2.5 px-3">Valor Pago</th>
+            <th class="py-2.5 px-3">Forma Pagto</th>
+            <th class="py-2.5 px-3">Status</th>
+          </tr>
+        `;
+
+        if (pkgs.length === 0) {
+          tbodyEl.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">Nenhum pacote contratado no sistema.</td></tr>`;
+        } else {
+          tbodyEl.innerHTML = pkgs.map(p => {
+            const rest = p.total_sessions - p.completed_sessions;
+            const pct = Math.round((p.completed_sessions / p.total_sessions) * 100);
+            return `
+              <tr class="border-b border-slate-100 hover:bg-slate-50/60">
+                <td class="py-2.5 px-3 font-bold text-slate-900">${p.client_name}</td>
+                <td class="py-2.5 px-3 font-medium text-slate-800">${p.service_name}</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-700">${p.completed_sessions} de ${p.total_sessions} (${pct}%)</td>
+                <td class="py-2.5 px-3 font-black ${rest > 0 ? 'text-emerald-700' : 'text-slate-400'}">${rest} sessão(ões)</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-900">R$ ${p.price_paid.toFixed(2).replace('.', ',')}</td>
+                <td class="py-2.5 px-3 text-slate-600">${p.payment_method}</td>
+                <td class="py-2.5 px-3 uppercase text-[10px] font-bold ${p.status === 'ativo' ? 'text-emerald-700' : 'text-slate-500'}">${p.status}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // 4. CLIENTS (CADASTRO GERAL)
+      else if (currentReportType === 'clients') {
+        titleEl.textContent = "RELATÓRIO CADASTRAL DE CLIENTES (CRM)";
+        descEl.textContent = "Relação da base completa de pacientes, histórico de visitas e valor vitalício investido";
+
+        const totalClients = clientsList.length;
+        const totalInvestido = clientsList.reduce((acc, c) => acc + (c.total_spent || 0), 0);
+        const ticketMedio = totalClients > 0 ? (totalInvestido / totalClients) : 0;
+        const comPacote = clientsList.filter(c => c.active_packages_count > 0).length;
+
+        countEl.textContent = `${totalClients} clientes cadastrados`;
+        cardsEl.innerHTML = `
+          <div class="bg-purple-50 border border-purple-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-purple-700">Total de Clientes</span>
+            <div class="text-xl font-extrabold text-purple-800 mt-0.5">${totalClients}</div>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-emerald-700">Clientes com Pacotes Ativos</span>
+            <div class="text-xl font-extrabold text-emerald-700 mt-0.5">${comPacote}</div>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-indigo-700">Ticket Médio / Cliente</span>
+            <div class="text-xl font-extrabold text-indigo-800 mt-0.5">R$ ${ticketMedio.toFixed(2).replace('.', ',')}</div>
+          </div>
+          <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-rose-700">Faturamento Acumulado</span>
+            <div class="text-xl font-extrabold text-rose-800 mt-0.5">R$ ${totalInvestido.toFixed(2).replace('.', ',')}</div>
+          </div>
+        `;
+
+        theadEl.innerHTML = `
+          <tr>
+            <th class="py-2.5 px-3">Nome Completo</th>
+            <th class="py-2.5 px-3">WhatsApp</th>
+            <th class="py-2.5 px-3">CPF</th>
+            <th class="py-2.5 px-3">Pacotes Ativos</th>
+            <th class="py-2.5 px-3">Total Investido</th>
+            <th class="py-2.5 px-3">Última Sessão</th>
+          </tr>
+        `;
+
+        if (clientsList.length === 0) {
+          tbodyEl.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Nenhum cliente cadastrado.</td></tr>`;
+        } else {
+          tbodyEl.innerHTML = clientsList.map(c => {
+            let lastDate = 'Nenhuma';
+            if (c.last_appointment_date) {
+              const [y, m, d] = c.last_appointment_date.split('-');
+              lastDate = `${d}/${m}/${y}`;
+            }
+            return `
+              <tr class="border-b border-slate-100 hover:bg-slate-50/60">
+                <td class="py-2.5 px-3 font-bold text-slate-900">${c.name}</td>
+                <td class="py-2.5 px-3 font-mono text-slate-700">${c.phone}</td>
+                <td class="py-2.5 px-3 text-slate-600">${c.cpf || '-'}</td>
+                <td class="py-2.5 px-3 font-semibold text-slate-800">${c.active_packages_count} pacote(s)</td>
+                <td class="py-2.5 px-3 font-bold text-emerald-700">R$ ${(c.total_spent || 0).toFixed(2).replace('.', ',')}</td>
+                <td class="py-2.5 px-3 text-slate-600">${lastDate}</td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // 5. RETENTION (ANTI-PERDA +30 DIAS)
+      else if (currentReportType === 'retention') {
+        titleEl.textContent = "RELATÓRIO ANTI-PERDA DE CLIENTES (RISCO DE CHURN +30 DIAS)";
+        descEl.textContent = "Pacientes que realizaram sessões há mais de 30 dias para contato imediato e recuperação de faturamento";
+
+        const res = await fetch('/api/admin/analytics', { headers: getAdminHeaders() });
+        const anData = await res.json();
+        const atRisk = anData.at_risk_clients || [];
+
+        countEl.textContent = `${atRisk.length} clientes em risco`;
+        cardsEl.innerHTML = `
+          <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-rose-700">Clientes em Risco</span>
+            <div class="text-xl font-extrabold text-rose-700 mt-0.5">${atRisk.length}</div>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-amber-700">Intervalo Máximo Recomendado</span>
+            <div class="text-xl font-extrabold text-amber-700 mt-0.5">30 a 45 dias</div>
+          </div>
+          <div class="col-span-2 bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Objetivo Clínico</span>
+            <p class="text-xs text-slate-700 font-medium mt-0.5">Impedir a perda da sincronia da fase anágena dos pelos e resgatar o cliente para conclusão do tratamento.</p>
+          </div>
+        `;
+
+        theadEl.innerHTML = `
+          <tr>
+            <th class="py-2.5 px-3">Paciente</th>
+            <th class="py-2.5 px-3">WhatsApp</th>
+            <th class="py-2.5 px-3">Dias sem Sessão</th>
+            <th class="py-2.5 px-3">Status do Risco</th>
+            <th class="py-2.5 px-3 text-center">Checklist de Contato / Retorno</th>
+          </tr>
+        `;
+
+        if (atRisk.length === 0) {
+          tbodyEl.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-emerald-600 font-bold">🎉 Nenhum cliente em risco! Todos estão em dia com as sessões.</td></tr>`;
+        } else {
+          tbodyEl.innerHTML = atRisk.map(c => `
+            <tr class="border-b border-slate-100 hover:bg-slate-50/60">
+              <td class="py-2.5 px-3 font-bold text-slate-900">${c.name}</td>
+              <td class="py-2.5 px-3 font-mono text-slate-700">${c.phone}</td>
+              <td class="py-2.5 px-3 font-bold text-rose-600">${c.days_inactive} dias sem vir</td>
+              <td class="py-2.5 px-3">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${c.days_inactive > 60 ? 'bg-red-100 text-red-800' : 'bg-rose-100 text-rose-800'}">
+                  ${c.days_inactive > 60 ? 'Alto Risco (>60d)' : 'Atenção (+30d)'}
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-center text-slate-500 font-mono text-[10px]">
+                [ ] Contatado em __/__/____  [ ] Reagendou para __/__
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+    }
   </script>
 </body>
 </html>
