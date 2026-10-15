@@ -126,9 +126,39 @@ def init_db():
         plan TEXT DEFAULT 'trial',
         subscription_status TEXT DEFAULT 'active',
         trial_ends_at TEXT,
+        subscription_ends_at TEXT,
+        monthly_price REAL DEFAULT 79.0,
+        is_blocked INTEGER DEFAULT 0,
+        notes TEXT DEFAULT '',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
+
+    cursor.execute("PRAGMA table_info(clinics);")
+    c_cols = [c[1] for c in cursor.fetchall()]
+    if "subscription_ends_at" not in c_cols:
+        cursor.execute("ALTER TABLE clinics ADD COLUMN subscription_ends_at TEXT;")
+    if "monthly_price" not in c_cols:
+        cursor.execute("ALTER TABLE clinics ADD COLUMN monthly_price REAL DEFAULT 79.0;")
+    if "is_blocked" not in c_cols:
+        cursor.execute("ALTER TABLE clinics ADD COLUMN is_blocked INTEGER DEFAULT 0;")
+    if "notes" not in c_cols:
+        cursor.execute("ALTER TABLE clinics ADD COLUMN notes TEXT DEFAULT '';")
+
+    # Tabela de Configuração Master do SaaS (Chave PIX e dados de recebimento do SuperAdmin)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS saas_config (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    );
+    """)
+    for k, v in [
+        ("superadmin_pix_key", ""),
+        ("superadmin_pix_name", "Administrador"),
+        ("superadmin_whatsapp", "11987654321"),
+        ("default_monthly_price", "79.0")
+    ]:
+        cursor.execute("INSERT OR IGNORE INTO saas_config (key, value) VALUES (?, ?)", (k, v))
 
     # 2. Tabela de Usuários (Donos e Equipe)
     cursor.execute("""
@@ -511,6 +541,20 @@ class CashFlowEntry(BaseModel):
     transaction_date: str
     client_id: Optional[int] = None
 
+class SaasConfigUpdate(BaseModel):
+    pix_key: Optional[str] = ""
+    pix_name: Optional[str] = ""
+    whatsapp: Optional[str] = ""
+    default_monthly_price: Optional[float] = 79.0
+
+class ClinicRenewRequest(BaseModel):
+    days: Optional[int] = 30
+    plan: Optional[str] = "essencial"
+    monthly_price: Optional[float] = None
+
+class ClinicExtendTrialRequest(BaseModel):
+    days: Optional[int] = 7
+
 # --- Dependência de Autenticação Multi-Tenant ---
 
 def get_current_user(
@@ -538,6 +582,7 @@ def get_current_user(
                     "email": user["email"],
                     "role": user["role"],
                     "is_superadmin": user["is_superadmin"],
+                    "is_blocked": int(clinic["is_blocked"]) if "is_blocked" in clinic.keys() and clinic["is_blocked"] else 0,
                     "clinic": dict(clinic)
                 }
 
@@ -554,12 +599,23 @@ def get_current_user(
             "email": user["email"] if user else "admin@laserglow.com",
             "role": "owner",
             "is_superadmin": 1,
+            "is_blocked": 0,
             "clinic": dict(clinic) if clinic else {"id": 1, "name": "LaserGlow Clinic", "slug": "laserglow"}
         }
 
     raise HTTPException(status_code=401, detail="Sessão não autorizada ou expirada. Faça login.")
 
 def verify_admin(current_user: dict = Depends(get_current_user)):
+    if current_user.get("is_blocked") and not current_user.get("is_superadmin") and current_user.get("clinic_id") != 1:
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso bloqueado. A assinatura da sua clínica está suspensa por pendência financeira. Realize o pagamento via PIX para reativar."
+        )
+    return current_user
+
+def verify_superadmin(current_user: dict = Depends(get_current_user)):
+    if not current_user.get("is_superadmin") and current_user.get("clinic_id") != 1:
+        raise HTTPException(status_code=403, detail="Acesso restrito ao SuperAdmin do sistema.")
     return current_user
 
 # --- Funções Auxiliares de Clínica e Agenda ---
@@ -937,10 +993,40 @@ def auth_login(data: LoginRequest):
     }
 
 @app.get("/api/admin/me")
-def get_current_user_and_clinic(current_user: dict = Depends(verify_admin)):
+def get_current_user_and_clinic(current_user: dict = Depends(get_current_user)):
     conn = get_db()
     clinic = conn.execute("SELECT * FROM clinics WHERE id = ?", (current_user["clinic_id"],)).fetchone()
+    
+    pix_key_row = conn.execute("SELECT value FROM saas_config WHERE key = 'superadmin_pix_key'").fetchone()
+    pix_name_row = conn.execute("SELECT value FROM saas_config WHERE key = 'superadmin_pix_name'").fetchone()
+    whatsapp_row = conn.execute("SELECT value FROM saas_config WHERE key = 'superadmin_whatsapp'").fetchone()
     conn.close()
+
+    clinic_dict = dict(clinic) if clinic else current_user.get("clinic")
+    
+    # Cálculo preciso de dias restantes de teste ou assinatura
+    days_left = 15
+    now_dt = datetime.datetime.now()
+    if clinic_dict.get("subscription_ends_at"):
+        try:
+            sub_end = datetime.datetime.fromisoformat(clinic_dict["subscription_ends_at"])
+            days_left = (sub_end - now_dt).days
+        except Exception:
+            pass
+    elif clinic_dict.get("trial_ends_at"):
+        try:
+            trial_end = datetime.datetime.fromisoformat(clinic_dict["trial_ends_at"])
+            days_left = (trial_end - now_dt).days
+        except Exception:
+            pass
+
+    is_blocked = int(clinic_dict.get("is_blocked") or 0)
+    is_expired = (days_left < 0) and (current_user["clinic_id"] != 1)
+
+    clinic_dict["days_left"] = days_left
+    clinic_dict["is_blocked"] = is_blocked
+    clinic_dict["is_expired"] = is_expired
+
     return {
         "user": {
             "id": current_user["id"],
@@ -949,7 +1035,12 @@ def get_current_user_and_clinic(current_user: dict = Depends(verify_admin)):
             "role": current_user["role"],
             "is_superadmin": current_user.get("is_superadmin", 0)
         },
-        "clinic": dict(clinic) if clinic else current_user.get("clinic")
+        "clinic": clinic_dict,
+        "saas_payment_info": {
+            "pix_key": pix_key_row["value"] if pix_key_row else "",
+            "pix_name": pix_name_row["value"] if pix_name_row else "Administrador",
+            "whatsapp": whatsapp_row["value"] if whatsapp_row else ""
+        }
     }
 
 @app.post("/api/admin/login")
@@ -1525,6 +1616,218 @@ def delete_service(service_id: int, admin: dict = Depends(verify_admin)):
     conn.commit()
     conn.close()
     return {"success": True, "id": service_id}
+
+# --- Endpoints de Gestão Master SaaS (SuperAdmin) ---
+
+@app.get("/api/superadmin/config")
+def get_saas_config(admin: dict = Depends(verify_superadmin)):
+    conn = get_db()
+    rows = conn.execute("SELECT key, value FROM saas_config").fetchall()
+    conn.close()
+    cfg = {r["key"]: r["value"] for r in rows}
+    return {
+        "pix_key": cfg.get("superadmin_pix_key", ""),
+        "pix_name": cfg.get("superadmin_pix_name", "Administrador"),
+        "whatsapp": cfg.get("superadmin_whatsapp", ""),
+        "default_monthly_price": float(cfg.get("default_monthly_price", 79.0))
+    }
+
+@app.post("/api/superadmin/config")
+def update_saas_config(data: SaasConfigUpdate, admin: dict = Depends(verify_superadmin)):
+    conn = get_db()
+    if data.pix_key is not None:
+        conn.execute("INSERT OR REPLACE INTO saas_config (key, value) VALUES ('superadmin_pix_key', ?)", (data.pix_key.strip(),))
+    if data.pix_name is not None:
+        conn.execute("INSERT OR REPLACE INTO saas_config (key, value) VALUES ('superadmin_pix_name', ?)", (data.pix_name.strip(),))
+    if data.whatsapp is not None:
+        conn.execute("INSERT OR REPLACE INTO saas_config (key, value) VALUES ('superadmin_whatsapp', ?)", (data.whatsapp.strip(),))
+    if data.default_monthly_price is not None:
+        conn.execute("INSERT OR REPLACE INTO saas_config (key, value) VALUES ('default_monthly_price', ?)", (str(data.default_monthly_price),))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Configurações SaaS salvas com sucesso!"}
+
+@app.get("/api/superadmin/clinics")
+def list_saas_clinics(admin: dict = Depends(verify_superadmin)):
+    conn = get_db()
+    clinics_rows = conn.execute("""
+        SELECT c.*, 
+               u.name as owner_name, 
+               u.email as owner_email,
+               (SELECT COUNT(*) FROM appointments a WHERE a.clinic_id = c.id) as appointments_count,
+               (SELECT COUNT(*) FROM clients cl WHERE cl.clinic_id = c.id) as clients_count
+        FROM clinics c
+        LEFT JOIN users u ON u.clinic_id = c.id AND u.role = 'owner'
+        GROUP BY c.id
+        ORDER BY c.id DESC
+    """).fetchall()
+    conn.close()
+
+    now_dt = datetime.datetime.now()
+    clinics_list = []
+    total_active = 0
+    total_trial = 0
+    total_expired = 0
+    total_blocked = 0
+    total_mrr = 0.0
+
+    for row in clinics_rows:
+        c = dict(row)
+        c_id = c["id"]
+        plan = c.get("plan") or "trial"
+        monthly_price = float(c.get("monthly_price") or 79.0)
+        is_blocked = int(c.get("is_blocked") or 0)
+        
+        days_left = 0
+        expiration_date_str = ""
+        
+        if c.get("subscription_ends_at"):
+            try:
+                sub_end = datetime.datetime.fromisoformat(c["subscription_ends_at"])
+                days_left = (sub_end - now_dt).days
+                expiration_date_str = sub_end.strftime("%d/%m/%Y")
+            except Exception:
+                pass
+        elif c.get("trial_ends_at"):
+            try:
+                tr_end = datetime.datetime.fromisoformat(c["trial_ends_at"])
+                days_left = (tr_end - now_dt).days
+                expiration_date_str = tr_end.strftime("%d/%m/%Y")
+            except Exception:
+                pass
+
+        if is_blocked:
+            status = "blocked"
+            total_blocked += 1
+        elif days_left < 0 and c_id != 1:
+            status = "expired"
+            total_expired += 1
+        elif plan == "trial" and c_id != 1:
+            status = "trial"
+            total_trial += 1
+        else:
+            status = "active"
+            total_active += 1
+            if c_id != 1:
+                total_mrr += monthly_price
+
+        c["calculated_status"] = status
+        c["days_left"] = days_left
+        c["expiration_date_formatted"] = expiration_date_str
+        c["monthly_price"] = monthly_price
+        clinics_list.append(c)
+
+    return {
+        "summary": {
+            "total_clinics": len(clinics_list),
+            "active_clinics": total_active,
+            "trial_clinics": total_trial,
+            "expired_clinics": total_expired,
+            "blocked_clinics": total_blocked,
+            "estimated_mrr": round(total_mrr, 2)
+        },
+        "clinics": clinics_list
+    }
+
+@app.post("/api/superadmin/clinics/{clinic_id}/renew")
+def renew_clinic_subscription(clinic_id: int, req: ClinicRenewRequest, admin: dict = Depends(verify_superadmin)):
+    conn = get_db()
+    c = conn.execute("SELECT * FROM clinics WHERE id = ?", (clinic_id,)).fetchone()
+    if not c:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Clínica não encontrada.")
+
+    now_dt = datetime.datetime.now()
+    base_dt = now_dt
+    if c["subscription_ends_at"]:
+        try:
+            curr_end = datetime.datetime.fromisoformat(c["subscription_ends_at"])
+            if curr_end > now_dt:
+                base_dt = curr_end
+        except Exception:
+            pass
+
+    days = req.days or 30
+    new_end_dt = base_dt + datetime.timedelta(days=days)
+    new_end_str = new_end_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    plan = req.plan or c["plan"] or "essencial"
+    price = req.monthly_price if req.monthly_price is not None else c["monthly_price"]
+
+    conn.execute("""
+        UPDATE clinics
+        SET subscription_ends_at = ?,
+            plan = ?,
+            monthly_price = ?,
+            subscription_status = 'active',
+            is_blocked = 0
+        WHERE id = ?
+    """, (new_end_str, plan, price, clinic_id))
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": f"Assinatura renovada por +{days} dias até {new_end_dt.strftime('%d/%m/%Y')}!",
+        "new_end": new_end_str
+    }
+
+@app.post("/api/superadmin/clinics/{clinic_id}/extend-trial")
+def extend_clinic_trial(clinic_id: int, req: ClinicExtendTrialRequest, admin: dict = Depends(verify_superadmin)):
+    conn = get_db()
+    c = conn.execute("SELECT * FROM clinics WHERE id = ?", (clinic_id,)).fetchone()
+    if not c:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Clínica não encontrada.")
+
+    now_dt = datetime.datetime.now()
+    base_dt = now_dt
+    if c["trial_ends_at"]:
+        try:
+            curr_trial = datetime.datetime.fromisoformat(c["trial_ends_at"])
+            if curr_trial > now_dt:
+                base_dt = curr_trial
+        except Exception:
+            pass
+
+    days = req.days or 7
+    new_trial_dt = base_dt + datetime.timedelta(days=days)
+    new_trial_str = new_trial_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    conn.execute("""
+        UPDATE clinics
+        SET trial_ends_at = ?,
+            plan = 'trial',
+            subscription_status = 'trial',
+            is_blocked = 0
+        WHERE id = ?
+    """, (new_trial_str, clinic_id))
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": f"Período de teste estendido em +{days} dias até {new_trial_dt.strftime('%d/%m/%Y')}!",
+        "new_trial": new_trial_str
+    }
+
+@app.post("/api/superadmin/clinics/{clinic_id}/block")
+def block_clinic_access(clinic_id: int, admin: dict = Depends(verify_superadmin)):
+    if clinic_id == 1:
+        raise HTTPException(status_code=400, detail="Não é permitido bloquear a clínica matriz.")
+    conn = get_db()
+    conn.execute("UPDATE clinics SET is_blocked = 1, subscription_status = 'blocked' WHERE id = ?", (clinic_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Acesso da clínica bloqueado com sucesso!"}
+
+@app.post("/api/superadmin/clinics/{clinic_id}/unblock")
+def unblock_clinic_access(clinic_id: int, admin: dict = Depends(verify_superadmin)):
+    conn = get_db()
+    conn.execute("UPDATE clinics SET is_blocked = 0, subscription_status = 'active' WHERE id = ?", (clinic_id,))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Acesso da clínica desbloqueado com sucesso!"}
 
 # --- Rotas de Páginas HTML (Landing, Painel e Agendamento por Clínica) ---
 
