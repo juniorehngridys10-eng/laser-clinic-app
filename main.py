@@ -391,19 +391,63 @@ def init_db():
     conn.commit()
     conn.close()
 
-def seed_default_services_for_clinic(clinic_id: int, cursor=None):
-    default_services = [
-        ("Axilas (Avulsa)", "Sessão Avulsa", 1, 30, 89.90, clinic_id),
-        ("Virilha Completa (Avulsa)", "Sessão Avulsa", 1, 30, 149.90, clinic_id),
-        ("Pernas Inteiras (Avulsa)", "Sessão Avulsa", 1, 45, 199.90, clinic_id),
-        ("Barba Completa (Avulsa)", "Sessão Avulsa", 1, 30, 119.90, clinic_id),
-        ("Faixa de Barba (Avulsa)", "Sessão Avulsa", 1, 20, 69.90, clinic_id),
-        ("Buço / Queixo (Avulsa)", "Sessão Avulsa", 1, 15, 49.90, clinic_id),
-        ("Pacote Axilas (10 Sessões)", "Pacote Promocional", 10, 30, 499.00, clinic_id),
-        ("Pacote Virilha Completa (10 Sessões)", "Pacote Promocional", 10, 30, 899.00, clinic_id),
-        ("Pacote Pernas Inteiras (10 Sessões)", "Pacote Promocional", 10, 45, 1290.00, clinic_id),
-        ("Combo VIP: Axilas + Virilha (10 Sessões)", "Pacote Promocional", 10, 45, 1190.00, clinic_id)
-    ]
+def seed_default_services_for_clinic(clinic_id: int, cursor=None, segment: str = "laser"):
+    segment = (segment or "laser").lower()
+
+    if any(w in segment for w in ["salao", "salão", "cabel", "beleza", "hair"]):
+        default_services = [
+            ("Corte Feminino & Escova", "Cabelos", 1, 45, 89.90, clinic_id),
+            ("Escova Modelada & Lavagem", "Cabelos", 1, 30, 49.90, clinic_id),
+            ("Manicure & Pedicure Completa", "Unhas", 1, 60, 65.00, clinic_id),
+            ("Design de Sobrancelhas", "Estética Facial", 1, 30, 45.00, clinic_id),
+            ("Coloração / Retoque de Raiz", "Cabelos", 1, 60, 140.00, clinic_id),
+            ("Mechas / Luzes & Matização", "Cabelos", 1, 90, 260.00, clinic_id),
+            ("Hidratação Profunda & Escova", "Cabelos", 1, 45, 95.00, clinic_id),
+            ("Botox Capilar / Alinhamento", "Cabelos", 1, 60, 180.00, clinic_id),
+            ("Spa dos Pés & Esmaltação", "Unhas", 1, 45, 55.00, clinic_id),
+            ("Pacote Fidelidade: 4 Escovas + 4 Manicures", "Pacotes Promocionais", 8, 45, 320.00, clinic_id)
+        ]
+    elif any(w in segment for w in ["barbearia", "barba"]):
+        default_services = [
+            ("Corte Degradê / Social", "Cabelo", 1, 30, 45.00, clinic_id),
+            ("Barba com Toalha Quente", "Barba", 1, 30, 40.00, clinic_id),
+            ("Combo: Cabelo + Barba", "Combos", 1, 45, 75.00, clinic_id),
+            ("Pigmentação de Barba", "Barba", 1, 20, 30.00, clinic_id),
+            ("Sobrancelha na Navalha", "Acabamento", 1, 15, 20.00, clinic_id),
+            ("Lavagem & Penteado Pomada", "Cabelo", 1, 20, 25.00, clinic_id),
+            ("Limpeza de Pele Express", "Estética", 1, 30, 50.00, clinic_id),
+            ("Platinado / Nevou", "Química", 1, 90, 150.00, clinic_id),
+            ("Selagem / Alinhamento Capilar", "Química", 1, 45, 90.00, clinic_id),
+            ("Clube da Barba: 4 Cortes + 4 Barbas", "Assinatura VIP", 8, 45, 220.00, clinic_id)
+        ]
+    elif any(w in segment for w in ["unha", "nail", "sobrancelha"]):
+        default_services = [
+            ("Alongamento em Fibra de Vidro", "Unhas", 1, 90, 160.00, clinic_id),
+            ("Manutenção de Fibra", "Unhas", 1, 60, 100.00, clinic_id),
+            ("Esmaltação em Gel", "Unhas", 1, 45, 70.00, clinic_id),
+            ("Manicure Tradicional", "Unhas", 1, 40, 35.00, clinic_id),
+            ("Pedicure Tradicional", "Unhas", 1, 45, 40.00, clinic_id),
+            ("Design de Sobrancelha com Henna", "Sobrancelhas", 1, 35, 55.00, clinic_id),
+            ("Lash Lifting / Permanente de Cílios", "Cílios", 1, 60, 120.00, clinic_id),
+            ("Extensão de Cílios Fio a Fio", "Cílios", 1, 90, 150.00, clinic_id),
+            ("Spa dos Pés com Parafina", "Unhas", 1, 40, 60.00, clinic_id),
+            ("Pacote 4 Manicures do Mês", "Pacotes Promocionais", 4, 40, 120.00, clinic_id)
+        ]
+    else:
+        # Padrão Laser e Estética Avançada
+        default_services = [
+            ("Axilas (Avulsa)", "Sessão Avulsa", 1, 30, 89.90, clinic_id),
+            ("Virilha Completa (Avulsa)", "Sessão Avulsa", 1, 30, 149.90, clinic_id),
+            ("Pernas Inteiras (Avulsa)", "Sessão Avulsa", 1, 45, 199.90, clinic_id),
+            ("Barba Completa (Avulsa)", "Sessão Avulsa", 1, 30, 119.90, clinic_id),
+            ("Faixa de Barba (Avulsa)", "Sessão Avulsa", 1, 20, 69.90, clinic_id),
+            ("Buço / Queixo (Avulsa)", "Sessão Avulsa", 1, 15, 49.90, clinic_id),
+            ("Pacote Axilas (10 Sessões)", "Pacote Promocional", 10, 30, 499.00, clinic_id),
+            ("Pacote Virilha Completa (10 Sessões)", "Pacote Promocional", 10, 30, 899.00, clinic_id),
+            ("Pacote Pernas Inteiras (10 Sessões)", "Pacote Promocional", 10, 45, 1290.00, clinic_id),
+            ("Combo VIP: Axilas + Virilha (10 Sessões)", "Pacote Promocional", 10, 45, 1190.00, clinic_id)
+        ]
+
     if cursor:
         cursor.executemany("INSERT INTO services (name, category, sessions_count, duration_minutes, price, clinic_id) VALUES (?, ?, ?, ?, ?, ?)", default_services)
     else:
@@ -448,6 +492,7 @@ class RegisterClinicRequest(BaseModel):
     password: str
     phone: Optional[str] = ""
     slug: Optional[str] = None
+    segment: Optional[str] = "salao"
 
 class LoginRequest(BaseModel):
     email: Optional[str] = None
@@ -905,11 +950,32 @@ def register_clinic(data: RegisterClinicRequest):
         slug = f"{base_slug}-{idx}"
         idx += 1
 
+    segment = (data.segment or "").strip().lower()
+    if not segment:
+        name_lower = clinic_name.lower()
+        if any(w in name_lower for w in ["salao", "salão", "hair", "cabel", "beleza"]):
+            segment = "salao"
+        elif any(w in name_lower for w in ["barba", "barbearia"]):
+            segment = "barbearia"
+        elif any(w in name_lower for w in ["unha", "nail", "sobrancelha"]):
+            segment = "unhas"
+        else:
+            segment = "laser"
+
+    if segment == "salao":
+        subtitle = "Salão de Beleza, Cabelos & Estética"
+    elif segment == "barbearia":
+        subtitle = "Barbearia & Cuidados Masculinos"
+    elif segment == "unhas":
+        subtitle = "Studio de Unhas & Sobrancelhas"
+    else:
+        subtitle = "Depilação a Laser e Estética Avançada"
+
     trial_end = (datetime.datetime.now() + datetime.timedelta(days=15)).strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("""
-        INSERT INTO clinics (name, slug, phone, plan, subscription_status, trial_ends_at)
-        VALUES (?, ?, ?, 'trial', 'active', ?)
-    """, (clinic_name, slug, data.phone or "", trial_end))
+        INSERT INTO clinics (name, subtitle, slug, phone, plan, subscription_status, trial_ends_at)
+        VALUES (?, ?, ?, ?, 'trial', 'active', ?)
+    """, (clinic_name, subtitle, slug, data.phone or "", trial_end))
     clinic_id = cursor.lastrowid
 
     pwd_hash = hash_password(password)
@@ -921,7 +987,7 @@ def register_clinic(data: RegisterClinicRequest):
     conn.commit()
     conn.close()
 
-    seed_default_services_for_clinic(clinic_id)
+    seed_default_services_for_clinic(clinic_id, segment=segment)
 
     token = create_token({
         "user_id": user_id,
