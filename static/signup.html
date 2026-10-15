@@ -53,18 +53,64 @@
       <!-- Formulário de Cadastro -->
       <form id="form-signup" onsubmit="handleSignup(event)" class="space-y-4">
         
+        <!-- Seletor de Segmento de Negócio -->
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Nome da sua Clínica ou Espaço:</label>
+          <label class="block text-xs font-bold text-slate-700 mb-2">Qual é o seu tipo de negócio?</label>
+          <div class="grid grid-cols-2 gap-2" id="segment-selector">
+            <label class="segment-card flex items-center gap-2.5 p-3 rounded-xl border-2 border-rose-500 bg-rose-50/50 cursor-pointer transition hover:border-rose-400">
+              <input type="radio" name="segment" value="salao" checked onchange="onSegmentChange(this)" class="accent-rose-500">
+              <div>
+                <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span class="text-base">💇‍♀️</span> Salão de Beleza
+                </div>
+                <div class="text-[10px] text-slate-500">Cabelo, escova, mechas</div>
+              </div>
+            </label>
+
+            <label class="segment-card flex items-center gap-2.5 p-3 rounded-xl border-2 border-slate-200 bg-white cursor-pointer transition hover:border-rose-300">
+              <input type="radio" name="segment" value="laser" onchange="onSegmentChange(this)" class="accent-rose-500">
+              <div>
+                <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span class="text-base">✨</span> Estética & Laser
+                </div>
+                <div class="text-[10px] text-slate-500">Depilação, facial, botox</div>
+              </div>
+            </label>
+
+            <label class="segment-card flex items-center gap-2.5 p-3 rounded-xl border-2 border-slate-200 bg-white cursor-pointer transition hover:border-rose-300">
+              <input type="radio" name="segment" value="barbearia" onchange="onSegmentChange(this)" class="accent-rose-500">
+              <div>
+                <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span class="text-base">💈</span> Barbearia
+                </div>
+                <div class="text-[10px] text-slate-500">Corte, barba e degradê</div>
+              </div>
+            </label>
+
+            <label class="segment-card flex items-center gap-2.5 p-3 rounded-xl border-2 border-slate-200 bg-white cursor-pointer transition hover:border-rose-300">
+              <input type="radio" name="segment" value="unhas" onchange="onSegmentChange(this)" class="accent-rose-500">
+              <div>
+                <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <span class="text-base">💅</span> Unhas & Cílios
+                </div>
+                <div class="text-[10px] text-slate-500">Alongamento e sobrancelha</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" id="label-business-name">Nome do seu Estabelecimento:</label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-              <i class="fa-solid fa-clinic-medical text-sm"></i>
+              <i class="fa-solid fa-store text-sm" id="icon-business"></i>
             </span>
-            <input type="text" id="clinic-name" required placeholder="Ex: Bella Pele Estética & Laser" oninput="updateSlugPreview(this.value)" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50">
+            <input type="text" id="clinic-name" required placeholder="Ex: Studio Bella Donna Cabeleireiros" oninput="updateSlugPreview(this.value)" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50">
           </div>
           <!-- Preview do Link Público -->
           <div class="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1">
             <span>Seu link será:</span>
-            <code id="slug-preview" class="font-mono text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">/c/sua-clinica/agendar</code>
+            <code id="slug-preview" class="font-mono text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">/c/seu-salao/agendar</code>
           </div>
         </div>
 
@@ -150,6 +196,36 @@
   </footer>
 
   <script>
+    function onSegmentChange(radio) {
+      document.querySelectorAll('.segment-card').forEach(card => {
+        card.classList.remove('border-rose-500', 'bg-rose-50/50');
+        card.classList.add('border-slate-200', 'bg-white');
+      });
+      const currentCard = radio.closest('.segment-card');
+      if (currentCard) {
+        currentCard.classList.remove('border-slate-200', 'bg-white');
+        currentCard.classList.add('border-rose-500', 'bg-rose-50/50');
+      }
+
+      const inputName = document.getElementById('clinic-name');
+      const labelName = document.getElementById('label-business-name');
+      const seg = radio.value;
+
+      if (seg === 'salao') {
+        labelName.textContent = "Nome do seu Salão de Beleza:";
+        inputName.placeholder = "Ex: Studio Bella Donna Cabeleireiros";
+      } else if (seg === 'barbearia') {
+        labelName.textContent = "Nome da sua Barbearia:";
+        inputName.placeholder = "Ex: Barbearia Dom Pedro Cortes";
+      } else if (seg === 'unhas') {
+        labelName.textContent = "Nome do seu Studio de Unhas & Cílios:";
+        inputName.placeholder = "Ex: Studio Glamour Nails & Lash";
+      } else {
+        labelName.textContent = "Nome da sua Clínica ou Espaço:";
+        inputName.placeholder = "Ex: Bella Pele Estética & Laser";
+      }
+    }
+
     function slugify(text) {
       return text.toString().toLowerCase().trim()
         .replace(/[àáâãäå]/g, 'a')
@@ -160,7 +236,7 @@
         .replace(/[ç]/g, 'c')
         .replace(/[^a-z0-9\-]/g, '-')
         .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '') || 'sua-clinica';
+        .replace(/^-|-$/g, '') || 'seu-espaco';
     }
 
     function updateSlugPreview(name) {
@@ -190,8 +266,9 @@
       const btn = document.getElementById('btn-submit');
       const originalText = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Criando sua clínica...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Criando seu espaço...';
 
+      const selectedSegment = document.querySelector('input[name="segment"]:checked')?.value || 'salao';
       const clinicName = document.getElementById('clinic-name').value.trim();
       const ownerName = document.getElementById('owner-name').value.trim();
       const phone = document.getElementById('clinic-phone').value.trim();
@@ -204,7 +281,8 @@
         owner_name: ownerName,
         email: email,
         password: password,
-        phone: phone
+        phone: phone,
+        segment: selectedSegment
       };
 
       try {
@@ -217,18 +295,18 @@
         const data = await res.json();
 
         if (!res.ok) {
-          errEl.textContent = data.detail || "Erro ao criar conta da clínica. Tente novamente.";
+          errEl.textContent = data.detail || "Erro ao criar conta. Tente novamente.";
           errEl.classList.remove('hidden');
           btn.disabled = false;
           btn.innerHTML = originalText;
           return;
         }
 
-        // Salva o token da nova clínica e redireciona direto para o painel!
+        // Salva o token do novo estabelecimento e redireciona direto para o painel!
         localStorage.setItem('laser_admin_token', data.token);
         localStorage.setItem('laser_admin_pin', data.token);
 
-        alert(`🎉 Parabéns, ${ownerName}!\n\nSua clínica "${clinicName}" foi criada com sucesso com 15 dias de teste grátis.\n\nVocê será redirecionado para o seu painel de gestão agora.`);
+        alert(`🎉 Parabéns, ${ownerName}!\n\nSeu espaço "${clinicName}" foi criado com sucesso com 15 dias de teste grátis e seus serviços já foram cadastrados automaticamente!\n\nVocê será redirecionado para o seu painel de gestão agora.`);
         window.location.href = '/admin';
 
       } catch (err) {
