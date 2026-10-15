@@ -1,14 +1,20 @@
 import sqlite3
 import datetime
+import time
+import os
+import shutil
+import json
+import re
+import hashlib
+import secrets
+import hmac
+import base64
 from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-import os
-import shutil
-import json
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 # Suporte automático a Persistent Disk do Render (/var/data) ou pasta local
@@ -20,9 +26,68 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads") if os.path.exists("/var/data") else os.path.join(STATIC_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-ADMIN_PIN = "1234"  # Senha padrão de acesso ao Painel da Clínica
+ADMIN_PIN = "1234"  # Senha padrão / fallback de acesso
+SECRET_KEY = os.environ.get("SECRET_KEY", "laser-clinic-saas-secret-key-2026-xyz-token")
 
-app = FastAPI(title="Laser Clinic Agendamento & Gestão Completa")
+def slugify(text: str) -> str:
+    text = (text or "").lower().strip()
+    text = re.sub(r'[àáâãäå]', 'a', text)
+    text = re.sub(r'[èéêë]', 'e', text)
+    text = re.sub(r'[ìíîï]', 'i', text)
+    text = re.sub(r'[òóôõö]', 'o', text)
+    text = re.sub(r'[ùúûü]', 'u', text)
+    text = re.sub(r'[ç]', 'c', text)
+    text = re.sub(r'[^a-z0-9\-]', '-', text)
+    text = re.sub(r'-+', '-', text).strip('-')
+    return text or "clinica"
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    h = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+    return f"{salt}:{h.hex()}"
+
+def verify_password(password: str, hashed: str) -> bool:
+    if not hashed or ":" not in hashed:
+        return False
+    salt, h = hashed.split(":", 1)
+    test_h = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+    return hmac.compare_digest(test_h.hex(), h)
+
+def create_token(payload: dict, expires_in_seconds: int = 86400 * 30) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    p = payload.copy()
+    p["exp"] = int(time.time()) + expires_in_seconds
+    h_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
+    p_b64 = base64.urlsafe_b64encode(json.dumps(p).encode()).decode().rstrip("=")
+    msg = f"{h_b64}.{p_b64}"
+    sig = hmac.new(SECRET_KEY.encode(), msg.encode(), hashlib.sha256).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).decode().rstrip("=")
+    return f"{msg}.{sig_b64}"
+
+def decode_token(token: str) -> Optional[dict]:
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return None
+        msg = f"{parts[0]}.{parts[1]}"
+        expected_sig = hmac.new(SECRET_KEY.encode(), msg.encode(), hashlib.sha256).digest()
+        sig_b64 = parts[2]
+        rem = len(sig_b64) % 4
+        if rem:
+            sig_b64 += "=" * (4 - rem)
+        sig = base64.urlsafe_b64decode(sig_b64)
+        if not hmac.compare_digest(expected_sig, sig):
+            return None
+        rem_p = len(parts[1]) % 4
+        p_str = parts[1] + ("=" * (4 - rem_p) if rem_p else "")
+        p = json.loads(base64.urlsafe_b64decode(p_str).decode())
+        if p.get("exp") and time.time() > p["exp"]:
+            return None
+        return p
+    except Exception:
+        return None
+
+app = FastAPI(title="Laser Clinic Agendamento & Gestão Completa Multi-Clínica")
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +106,46 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
 
-    # 1. Tabela de Configurações da Clínica
+    # 1. Tabela Multi-Clínica (Tenants)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clinics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        subtitle TEXT DEFAULT 'Depilação a Laser e Estética Avançada',
+        logo_url TEXT DEFAULT '',
+        phone TEXT DEFAULT '',
+        instagram TEXT DEFAULT '',
+        opening_time TEXT DEFAULT '08:00',
+        closing_time TEXT DEFAULT '18:00',
+        slot_interval_minutes INTEGER DEFAULT 30,
+        has_lunch_break INTEGER DEFAULT 0,
+        lunch_start TEXT DEFAULT '12:00',
+        lunch_end TEXT DEFAULT '13:00',
+        working_days TEXT DEFAULT '["1","2","3","4","5","6"]',
+        plan TEXT DEFAULT 'trial',
+        subscription_status TEXT DEFAULT 'active',
+        trial_ends_at TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # 2. Tabela de Usuários (Donos e Equipe)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT DEFAULT 'owner',
+        is_superadmin INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (clinic_id) REFERENCES clinics (id)
+    );
+    """)
+
+    # Tabela Legada de Configurações para compatibilidade
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS clinic_settings (
         id INTEGER PRIMARY KEY,
@@ -53,34 +157,55 @@ def init_db():
     );
     """)
 
-    cursor.execute("SELECT COUNT(*) FROM clinic_settings")
+    # Migração da clínica padrão id=1
+    cursor.execute("SELECT COUNT(*) FROM clinics")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("SELECT * FROM clinic_settings WHERE id = 1")
+        old_row = cursor.fetchone()
+        now_dt = datetime.datetime.now()
+        trial_dt = (now_dt + datetime.timedelta(days=15)).strftime("%Y-%m-%d %H:%M:%S")
+        if old_row:
+            d = dict(old_row)
+            cursor.execute("""
+            INSERT INTO clinics (id, slug, name, subtitle, logo_url, phone, instagram,
+                                 opening_time, closing_time, slot_interval_minutes,
+                                 has_lunch_break, lunch_start, lunch_end, working_days,
+                                 plan, subscription_status, trial_ends_at)
+            VALUES (1, 'laserglow', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pro', 'active', ?)
+            """, (
+                d.get("name") or "LaserGlow Clinic",
+                d.get("subtitle") or "Depilação a Laser de Alta Tecnologia",
+                d.get("logo_url") or "",
+                d.get("phone") or "11987654321",
+                d.get("instagram") or "@laser.glow",
+                d.get("opening_time") or "08:00",
+                d.get("closing_time") or "18:00",
+                d.get("slot_interval_minutes") or 30,
+                d.get("has_lunch_break") or 0,
+                d.get("lunch_start") or "12:00",
+                d.get("lunch_end") or "13:00",
+                d.get("working_days") or '["1","2","3","4","5","6"]',
+                trial_dt
+            ))
+        else:
+            cursor.execute("""
+            INSERT INTO clinics (id, slug, name, subtitle, logo_url, phone, instagram, plan, subscription_status, trial_ends_at)
+            VALUES (1, 'laserglow', 'LaserGlow Clinic', 'Depilação a Laser de Alta Tecnologia', '', '11987654321', '@laser.glow', 'pro', 'active', ?)
+            """, (trial_dt,))
+
+    # Garantir usuário admin da clínica 1
+    cursor.execute("SELECT COUNT(*) FROM users WHERE email = 'admin@laserglow.com'")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
-        INSERT INTO clinic_settings (id, name, subtitle, logo_url, phone, instagram)
-        VALUES (1, 'LaserGlow Clinic', 'Depilação a Laser de Alta Tecnologia', '', '11987654321', '@laser.glow')
-        """)
+        INSERT INTO users (clinic_id, name, email, password_hash, role, is_superadmin)
+        VALUES (1, 'Administrador', 'admin@laserglow.com', ?, 'owner', 1)
+        """, (hash_password("1234"),))
 
-    cursor.execute("PRAGMA table_info(clinic_settings);")
-    c_settings_cols = [c[1] for c in cursor.fetchall()]
-    if "opening_time" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN opening_time TEXT DEFAULT '08:00';")
-    if "closing_time" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN closing_time TEXT DEFAULT '18:00';")
-    if "slot_interval_minutes" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN slot_interval_minutes INTEGER DEFAULT 30;")
-    if "has_lunch_break" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN has_lunch_break INTEGER DEFAULT 0;")
-    if "lunch_start" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN lunch_start TEXT DEFAULT '12:00';")
-    if "lunch_end" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN lunch_end TEXT DEFAULT '13:00';")
-    if "working_days" not in c_settings_cols:
-        cursor.execute("ALTER TABLE clinic_settings ADD COLUMN working_days TEXT DEFAULT '[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"]';")
-
-    # 2. Tabela de Serviços e Pacotes da Clínica
+    # 3. Tabela de Serviços e Pacotes da Clínica
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS services (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
         name TEXT NOT NULL,
         category TEXT DEFAULT 'Sessão Avulsa',
         sessions_count INTEGER DEFAULT 1,
@@ -95,13 +220,16 @@ def init_db():
         cursor.execute("ALTER TABLE services ADD COLUMN category TEXT DEFAULT 'Sessão Avulsa';")
     if "sessions_count" not in cols:
         cursor.execute("ALTER TABLE services ADD COLUMN sessions_count INTEGER DEFAULT 1;")
+    if "clinic_id" not in cols:
+        cursor.execute("ALTER TABLE services ADD COLUMN clinic_id INTEGER DEFAULT 1;")
 
-    # 3. Tabela de Clientes com campos completos
+    # 4. Tabela de Clientes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS clients (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
         name TEXT NOT NULL,
-        phone TEXT NOT NULL UNIQUE,
+        phone TEXT NOT NULL,
         email TEXT,
         cpf TEXT,
         birth_date TEXT,
@@ -111,6 +239,8 @@ def init_db():
     """)
     cursor.execute("PRAGMA table_info(clients);")
     client_cols = [c[1] for c in cursor.fetchall()]
+    if "clinic_id" not in client_cols:
+        cursor.execute("ALTER TABLE clients ADD COLUMN clinic_id INTEGER DEFAULT 1;")
     if "cpf" not in client_cols:
         cursor.execute("ALTER TABLE clients ADD COLUMN cpf TEXT;")
     if "birth_date" not in client_cols:
@@ -118,10 +248,11 @@ def init_db():
     if "notes" not in client_cols:
         cursor.execute("ALTER TABLE clients ADD COLUMN notes TEXT;")
 
-    # 4. Tabela de Agendamentos
+    # 5. Tabela de Agendamentos
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS appointments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
         client_id INTEGER NOT NULL,
         service_id INTEGER NOT NULL,
         appointment_date TEXT NOT NULL,
@@ -133,11 +264,16 @@ def init_db():
         FOREIGN KEY (service_id) REFERENCES services (id)
     );
     """)
+    cursor.execute("PRAGMA table_info(appointments);")
+    app_cols = [c[1] for c in cursor.fetchall()]
+    if "clinic_id" not in app_cols:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN clinic_id INTEGER DEFAULT 1;")
 
-    # 5. Tabela de Controle de Pacotes Vendidos aos Clientes (Sessões Restantes)
+    # 6. Tabela de Controle de Pacotes Vendidos aos Clientes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS client_packages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
         client_id INTEGER NOT NULL,
         service_id INTEGER NOT NULL,
         total_sessions INTEGER NOT NULL,
@@ -151,11 +287,16 @@ def init_db():
         FOREIGN KEY (service_id) REFERENCES services (id)
     );
     """)
+    cursor.execute("PRAGMA table_info(client_packages);")
+    cp_cols = [c[1] for c in cursor.fetchall()]
+    if "clinic_id" not in cp_cols:
+        cursor.execute("ALTER TABLE client_packages ADD COLUMN clinic_id INTEGER DEFAULT 1;")
 
-    # 6. Tabela de Fluxo de Caixa (Entradas e Saídas)
+    # 7. Tabela de Fluxo de Caixa (Entradas e Saídas)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS cash_flow (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
         type TEXT NOT NULL,
         category TEXT NOT NULL,
         description TEXT NOT NULL,
@@ -167,12 +308,17 @@ def init_db():
         FOREIGN KEY (client_id) REFERENCES clients (id)
     );
     """)
+    cursor.execute("PRAGMA table_info(cash_flow);")
+    cf_cols = [c[1] for c in cursor.fetchall()]
+    if "clinic_id" not in cf_cols:
+        cursor.execute("ALTER TABLE cash_flow ADD COLUMN clinic_id INTEGER DEFAULT 1;")
 
-    # 7. Tabela de Ficha de Avaliação e Anamnese do Cliente (Luz e Pele)
+    # 8. Tabela de Ficha de Avaliação e Anamnese do Cliente (Luz e Pele)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anamnese_forms (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL UNIQUE,
+        clinic_id INTEGER DEFAULT 1,
+        client_id INTEGER NOT NULL,
         contract_number TEXT,
         sexo TEXT,
         endereco TEXT,
@@ -199,32 +345,42 @@ def init_db():
         FOREIGN KEY (client_id) REFERENCES clients (id)
     );
     """)
+    cursor.execute("PRAGMA table_info(anamnese_forms);")
+    af_cols = [c[1] for c in cursor.fetchall()]
+    if "clinic_id" not in af_cols:
+        cursor.execute("ALTER TABLE anamnese_forms ADD COLUMN clinic_id INTEGER DEFAULT 1;")
+    if "signature_image" not in af_cols:
+        cursor.execute("ALTER TABLE anamnese_forms ADD COLUMN signature_image TEXT;")
 
-    try:
-        cursor.execute("ALTER TABLE anamnese_forms ADD COLUMN signature_image TEXT")
-    except Exception:
-        pass
-
-    # Procedimentos padrão se vazio
-    cursor.execute("SELECT COUNT(*) FROM services")
+    # Procedimentos padrão se clínica 1 estiver vazia
+    cursor.execute("SELECT COUNT(*) FROM services WHERE clinic_id = 1")
     count = cursor.fetchone()[0]
     if count == 0:
-        default_services = [
-            ("Axilas (Avulsa)", "Sessão Avulsa", 1, 30, 89.90),
-            ("Virilha Completa (Avulsa)", "Sessão Avulsa", 1, 30, 149.90),
-            ("Pernas Inteiras (Avulsa)", "Sessão Avulsa", 1, 45, 199.90),
-            ("Barba Completa (Avulsa)", "Sessão Avulsa", 1, 30, 119.90),
-            ("Faixa de Barba (Avulsa)", "Sessão Avulsa", 1, 20, 69.90),
-            ("Buço / Queixo (Avulsa)", "Sessão Avulsa", 1, 15, 49.90),
-            ("Pacote Axilas (10 Sessões)", "Pacote Promocional", 10, 30, 499.00),
-            ("Pacote Virilha Completa (10 Sessões)", "Pacote Promocional", 10, 30, 899.00),
-            ("Pacote Pernas Inteiras (10 Sessões)", "Pacote Promocional", 10, 45, 1290.00),
-            ("Combo VIP: Axilas + Virilha (10 Sessões)", "Pacote Promocional", 10, 45, 1190.00)
-        ]
-        cursor.executemany("INSERT INTO services (name, category, sessions_count, duration_minutes, price) VALUES (?, ?, ?, ?, ?)", default_services)
+        seed_default_services_for_clinic(1, cursor)
 
     conn.commit()
     conn.close()
+
+def seed_default_services_for_clinic(clinic_id: int, cursor=None):
+    default_services = [
+        ("Axilas (Avulsa)", "Sessão Avulsa", 1, 30, 89.90, clinic_id),
+        ("Virilha Completa (Avulsa)", "Sessão Avulsa", 1, 30, 149.90, clinic_id),
+        ("Pernas Inteiras (Avulsa)", "Sessão Avulsa", 1, 45, 199.90, clinic_id),
+        ("Barba Completa (Avulsa)", "Sessão Avulsa", 1, 30, 119.90, clinic_id),
+        ("Faixa de Barba (Avulsa)", "Sessão Avulsa", 1, 20, 69.90, clinic_id),
+        ("Buço / Queixo (Avulsa)", "Sessão Avulsa", 1, 15, 49.90, clinic_id),
+        ("Pacote Axilas (10 Sessões)", "Pacote Promocional", 10, 30, 499.00, clinic_id),
+        ("Pacote Virilha Completa (10 Sessões)", "Pacote Promocional", 10, 30, 899.00, clinic_id),
+        ("Pacote Pernas Inteiras (10 Sessões)", "Pacote Promocional", 10, 45, 1290.00, clinic_id),
+        ("Combo VIP: Axilas + Virilha (10 Sessões)", "Pacote Promocional", 10, 45, 1190.00, clinic_id)
+    ]
+    if cursor:
+        cursor.executemany("INSERT INTO services (name, category, sessions_count, duration_minutes, price, clinic_id) VALUES (?, ?, ?, ?, ?, ?)", default_services)
+    else:
+        conn = get_db()
+        conn.cursor().executemany("INSERT INTO services (name, category, sessions_count, duration_minutes, price, clinic_id) VALUES (?, ?, ?, ?, ?, ?)", default_services)
+        conn.commit()
+        conn.close()
 
 init_db()
 
@@ -253,7 +409,20 @@ class ServiceItem(BaseModel):
     price: float
 
 class AdminLoginRequest(BaseModel):
-    pin: str
+    pin: Optional[str] = None
+
+class RegisterClinicRequest(BaseModel):
+    clinic_name: str
+    owner_name: str
+    email: str
+    password: str
+    phone: Optional[str] = ""
+    slug: Optional[str] = None
+
+class LoginRequest(BaseModel):
+    email: Optional[str] = None
+    password: Optional[str] = None
+    pin: Optional[str] = None
 
 class ClinicSettingsUpdate(BaseModel):
     name: str
@@ -342,77 +511,98 @@ class CashFlowEntry(BaseModel):
     transaction_date: str
     client_id: Optional[int] = None
 
-def verify_admin(x_admin_pin: Optional[str] = Header(None)):
-    if x_admin_pin != ADMIN_PIN:
-        raise HTTPException(status_code=401, detail="Acesso não autorizado. Digite o PIN da clínica.")
-    return True
+# --- Dependência de Autenticação Multi-Tenant ---
 
-# --- Endpoints Públicos (Clientes e Agendamento) ---
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    x_admin_pin: Optional[str] = Header(None)
+):
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split("Bearer ", 1)[1].strip()
+    elif x_admin_pin and len(x_admin_pin) > 15:
+        token = x_admin_pin
 
-@app.get("/api/settings")
-def get_clinic_settings():
+    if token:
+        payload = decode_token(token)
+        if payload and payload.get("user_id") and payload.get("clinic_id"):
+            conn = get_db()
+            user = conn.execute("SELECT * FROM users WHERE id = ?", (payload["user_id"],)).fetchone()
+            clinic = conn.execute("SELECT * FROM clinics WHERE id = ?", (payload["clinic_id"],)).fetchone()
+            conn.close()
+            if user and clinic:
+                return {
+                    "id": user["id"],
+                    "clinic_id": clinic["id"],
+                    "name": user["name"],
+                    "email": user["email"],
+                    "role": user["role"],
+                    "is_superadmin": user["is_superadmin"],
+                    "clinic": dict(clinic)
+                }
+
+    # Fallback para PIN legado (1234) ou Bearer 1234 (Clínica padrão 1)
+    if x_admin_pin == ADMIN_PIN or authorization == f"Bearer {ADMIN_PIN}":
+        conn = get_db()
+        clinic = conn.execute("SELECT * FROM clinics WHERE id = 1").fetchone()
+        user = conn.execute("SELECT * FROM users WHERE clinic_id = 1 LIMIT 1").fetchone()
+        conn.close()
+        return {
+            "id": user["id"] if user else 1,
+            "clinic_id": 1,
+            "name": user["name"] if user else "Admin",
+            "email": user["email"] if user else "admin@laserglow.com",
+            "role": "owner",
+            "is_superadmin": 1,
+            "clinic": dict(clinic) if clinic else {"id": 1, "name": "LaserGlow Clinic", "slug": "laserglow"}
+        }
+
+    raise HTTPException(status_code=401, detail="Sessão não autorizada ou expirada. Faça login.")
+
+def verify_admin(current_user: dict = Depends(get_current_user)):
+    return current_user
+
+# --- Funções Auxiliares de Clínica e Agenda ---
+
+def get_clinic_by_slug(slug: str):
     conn = get_db()
-    row = conn.execute("SELECT * FROM clinic_settings WHERE id = 1").fetchone()
+    c = conn.execute("SELECT * FROM clinics WHERE slug = ?", (slug,)).fetchone()
     conn.close()
-    if row:
-        d = dict(row)
-        if not d.get("opening_time"): d["opening_time"] = "08:00"
-        if not d.get("closing_time"): d["closing_time"] = "18:00"
-        if not d.get("slot_interval_minutes"): d["slot_interval_minutes"] = 30
-        if d.get("has_lunch_break") is None: d["has_lunch_break"] = 0
-        if not d.get("lunch_start"): d["lunch_start"] = "12:00"
-        if not d.get("lunch_end"): d["lunch_end"] = "13:00"
-        if not d.get("working_days"): d["working_days"] = '["1","2","3","4","5","6"]'
-        return d
-    return {
-        "name": "LaserGlow Clinic",
-        "subtitle": "Depilação a Laser de Alta Tecnologia",
-        "logo_url": "",
-        "phone": "",
-        "instagram": "",
-        "opening_time": "08:00",
-        "closing_time": "18:00",
-        "slot_interval_minutes": 30,
-        "has_lunch_break": 0,
-        "lunch_start": "12:00",
-        "lunch_end": "13:00",
-        "working_days": '["1","2","3","4","5","6"]'
-    }
+    if not c:
+        raise HTTPException(status_code=404, detail="Clínica não encontrada. Verifique o link de agendamento.")
+    return dict(c)
 
-@app.get("/api/services")
-def list_services():
+def get_clinic_by_id(clinic_id: int):
     conn = get_db()
-    rows = conn.execute("SELECT * FROM services ORDER BY category DESC, price ASC").fetchall()
+    c = conn.execute("SELECT * FROM clinics WHERE id = ?", (clinic_id,)).fetchone()
     conn.close()
-    return [dict(r) for r in rows]
+    if not c:
+        raise HTTPException(status_code=404, detail="Clínica não encontrada.")
+    return dict(c)
 
-@app.get("/api/available-slots")
-def get_available_slots(date: str):
+def compute_available_slots(clinic: dict, date: str):
     conn = get_db()
-    settings = conn.execute("SELECT * FROM clinic_settings WHERE id = 1").fetchone()
     booked = conn.execute(
-        "SELECT appointment_time FROM appointments WHERE appointment_date = ? AND status != 'cancelado'",
-        (date,)
+        "SELECT appointment_time FROM appointments WHERE clinic_id = ? AND appointment_date = ? AND status != 'cancelado'",
+        (clinic["id"], date)
     ).fetchall()
     conn.close()
 
     booked_times = set(r["appointment_time"] for r in booked)
 
-    # Configurações de horários
-    opening_time = (settings["opening_time"] if settings and "opening_time" in settings.keys() and settings["opening_time"] else "08:00")
-    closing_time = (settings["closing_time"] if settings and "closing_time" in settings.keys() and settings["closing_time"] else "18:00")
-    interval = (int(settings["slot_interval_minutes"]) if settings and "slot_interval_minutes" in settings.keys() and settings["slot_interval_minutes"] else 30)
-    has_lunch = bool(settings["has_lunch_break"]) if settings and "has_lunch_break" in settings.keys() else False
-    lunch_s = (settings["lunch_start"] if settings and "lunch_start" in settings.keys() and settings["lunch_start"] else "12:00")
-    lunch_e = (settings["lunch_end"] if settings and "lunch_end" in settings.keys() and settings["lunch_end"] else "13:00")
-    working_days_raw = (settings["working_days"] if settings and "working_days" in settings.keys() and settings["working_days"] else '["1","2","3","4","5","6"]')
+    opening_time = clinic.get("opening_time") or "08:00"
+    closing_time = clinic.get("closing_time") or "18:00"
+    interval = int(clinic.get("slot_interval_minutes") or 30)
+    has_lunch = bool(clinic.get("has_lunch_break"))
+    lunch_s = clinic.get("lunch_start") or "12:00"
+    lunch_e = clinic.get("lunch_end") or "13:00"
+    working_days_raw = clinic.get("working_days") or '["1","2","3","4","5","6"]'
 
     try:
         working_days = [str(d) for d in json.loads(working_days_raw)]
     except Exception:
         working_days = ["1", "2", "3", "4", "5", "6"]
 
-    # Checar se dia da semana está ativo (0=Domingo, 1=Segunda, ..., 6=Sábado)
     try:
         dt = datetime.date.fromisoformat(date)
         weekday_num = str(dt.strftime("%w"))
@@ -450,7 +640,6 @@ def get_available_slots(date: str):
         slot_start = curr
         slot_end = curr + interval
 
-        # Pular slots que conflitem com intervalo de almoço
         is_lunch = False
         if has_lunch and lunch_start_min is not None and lunch_end_min is not None:
             if not (slot_end <= lunch_start_min or slot_start >= lunch_end_min):
@@ -469,16 +658,18 @@ def get_available_slots(date: str):
     ]
     return {"date": date, "closed": False, "slots": slots_status}
 
-@app.post("/api/book")
-def book_appointment(data: BookingRequest):
+def process_booking(clinic_id: int, data: BookingRequest):
     conn = get_db()
     cursor = conn.cursor()
 
-    # Verificar dia de funcionamento
-    settings = cursor.execute("SELECT * FROM clinic_settings WHERE id = 1").fetchone()
-    if settings and "working_days" in settings.keys() and settings["working_days"]:
+    clinic = cursor.execute("SELECT * FROM clinics WHERE id = ?", (clinic_id,)).fetchone()
+    if not clinic:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Clínica não encontrada.")
+
+    if clinic["working_days"]:
         try:
-            working_days = [str(d) for d in json.loads(settings["working_days"])]
+            working_days = [str(d) for d in json.loads(clinic["working_days"])]
             dt = datetime.date.fromisoformat(data.appointment_date)
             if str(dt.strftime("%w")) not in working_days:
                 conn.close()
@@ -495,25 +686,25 @@ def book_appointment(data: BookingRequest):
         clean_phone = "55" + clean_phone
 
     conflict = cursor.execute(
-        "SELECT id FROM appointments WHERE appointment_date = ? AND appointment_time = ? AND status != 'cancelado'",
-        (data.appointment_date, data.appointment_time)
+        "SELECT id FROM appointments WHERE clinic_id = ? AND appointment_date = ? AND appointment_time = ? AND status != 'cancelado'",
+        (clinic_id, data.appointment_date, data.appointment_time)
     ).fetchone()
     if conflict:
         conn.close()
         raise HTTPException(status_code=400, detail="Este horário acabou de ser reservado. Por favor, escolha outro.")
 
-    client = cursor.execute("SELECT id FROM clients WHERE phone = ?", (clean_phone,)).fetchone()
+    client = cursor.execute("SELECT id FROM clients WHERE clinic_id = ? AND phone = ?", (clinic_id, clean_phone)).fetchone()
     if client:
         client_id = client["id"]
-        cursor.execute("UPDATE clients SET name = ?, email = COALESCE(?, email) WHERE id = ?", (data.name, data.email, client_id))
+        cursor.execute("UPDATE clients SET name = ?, email = COALESCE(?, email) WHERE id = ? AND clinic_id = ?", (data.name, data.email, client_id, clinic_id))
     else:
-        cursor.execute("INSERT INTO clients (name, phone, email) VALUES (?, ?, ?)", (data.name, clean_phone, data.email))
+        cursor.execute("INSERT INTO clients (clinic_id, name, phone, email) VALUES (?, ?, ?, ?)", (clinic_id, data.name, clean_phone, data.email))
         client_id = cursor.lastrowid
 
     cursor.execute("""
-        INSERT INTO appointments (client_id, service_id, appointment_date, appointment_time, status, notes)
-        VALUES (?, ?, ?, ?, 'agendado', ?)
-    """, (client_id, data.service_id, data.appointment_date, data.appointment_time, data.notes or ""))
+        INSERT INTO appointments (clinic_id, client_id, service_id, appointment_date, appointment_time, status, notes)
+        VALUES (?, ?, ?, ?, ?, 'agendado', ?)
+    """, (clinic_id, client_id, data.service_id, data.appointment_date, data.appointment_time, data.notes or ""))
 
     app_id = cursor.lastrowid
     conn.commit()
@@ -523,238 +714,13 @@ def book_appointment(data: BookingRequest):
         FROM appointments a
         JOIN services s ON a.service_id = s.id
         JOIN clients c ON a.client_id = c.id
-        WHERE a.id = ?
-    """, (app_id,)).fetchone()
+        WHERE a.id = ? AND a.clinic_id = ?
+    """, (app_id, clinic_id)).fetchone()
     conn.close()
 
     return dict(details)
 
-# --- Endpoints Administrativos (Protegidos por PIN) ---
-
-@app.post("/api/admin/login")
-def admin_login(data: AdminLoginRequest):
-    if data.pin == ADMIN_PIN:
-        return {"authenticated": True, "token": ADMIN_PIN}
-    raise HTTPException(status_code=401, detail="Senha PIN incorreta.")
-
-@app.put("/api/admin/settings")
-def update_clinic_settings(settings: ClinicSettingsUpdate, _=Depends(verify_admin)):
-    conn = get_db()
-    conn.execute("""
-        UPDATE clinic_settings
-        SET name = ?, subtitle = ?, logo_url = ?, phone = ?, instagram = ?,
-            opening_time = ?, closing_time = ?, slot_interval_minutes = ?,
-            has_lunch_break = ?, lunch_start = ?, lunch_end = ?, working_days = ?
-        WHERE id = 1
-    """, (
-        settings.name, settings.subtitle, settings.logo_url, settings.phone, settings.instagram,
-        settings.opening_time or '08:00',
-        settings.closing_time or '18:00',
-        settings.slot_interval_minutes or 30,
-        settings.has_lunch_break or 0,
-        settings.lunch_start or '12:00',
-        settings.lunch_end or '13:00',
-        settings.working_days or '["1","2","3","4","5","6"]'
-    ))
-    conn.commit()
-    conn.close()
-    return {"success": True, "message": "Configurações e horários salvos com sucesso!"}
-
-@app.post("/api/admin/upload-logo")
-async def upload_logo(file: UploadFile = File(...), _=Depends(verify_admin)):
-    extension = os.path.splitext(file.filename)[1].lower()
-    if extension not in [".png", ".jpg", ".jpeg", ".svg", ".webp"]:
-        raise HTTPException(status_code=400, detail="Formato de imagem inválido. Use PNG, JPG ou SVG.")
-
-    filename = f"logo_{int(datetime.datetime.now().timestamp())}{extension}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    logo_url = f"/static/uploads/{filename}"
-
-    conn = get_db()
-    conn.execute("UPDATE clinic_settings SET logo_url = ? WHERE id = 1", (logo_url,))
-    conn.commit()
-    conn.close()
-
-    return {"success": True, "logo_url": logo_url}
-
-@app.get("/api/appointments")
-def list_appointments(date: Optional[str] = None, status: Optional[str] = None, _=Depends(verify_admin)):
-    conn = get_db()
-    query = """
-        SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.notes, a.created_at,
-               c.id as client_id, c.name as client_name, c.phone as client_phone, c.email as client_email,
-               s.id as service_id, s.name as service_name, s.category as service_category, s.price as service_price, s.duration_minutes
-        FROM appointments a
-        JOIN clients c ON a.client_id = c.id
-        JOIN services s ON a.service_id = s.id
-        WHERE 1=1
-    """
-    params = []
-    if date:
-        query += " AND a.appointment_date = ?"
-        params.append(date)
-    if status and status != 'todos':
-        query += " AND a.status = ?"
-        params.append(status)
-
-    query += " ORDER BY a.appointment_date DESC, a.appointment_time ASC"
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-# --- Gestão Completa de Clientes ---
-@app.get("/api/clients")
-def list_clients(_=Depends(verify_admin)):
-    conn = get_db()
-    query = """
-        SELECT c.*,
-               COUNT(DISTINCT a.id) as total_appointments,
-               MAX(a.appointment_date) as last_appointment_date,
-               COALESCE((
-                   SELECT COUNT(*) FROM client_packages cp WHERE cp.client_id = c.id AND cp.status = 'ativo'
-               ), 0) as active_packages_count,
-               COALESCE((
-                   SELECT SUM(cf.amount) FROM cash_flow cf WHERE cf.client_id = c.id AND cf.type = 'entrada'
-               ), 0) as total_spent
-        FROM clients c
-        LEFT JOIN appointments a ON c.id = a.client_id
-        GROUP BY c.id
-        ORDER BY c.name ASC
-    """
-    rows = conn.execute(query).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-@app.post("/api/admin/clients")
-def create_client(c: ClientCreateOrUpdate, _=Depends(verify_admin)):
-    conn = get_db()
-    cursor = conn.cursor()
-    clean_phone = "".join(filter(str.isdigit, c.phone))
-    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
-        clean_phone = "55" + clean_phone
-
-    existing = cursor.execute("SELECT id FROM clients WHERE phone = ?", (clean_phone,)).fetchone()
-    if existing:
-        conn.close()
-        raise HTTPException(status_code=400, detail="Já existe um cliente cadastrado com este telefone/WhatsApp.")
-
-    cursor.execute("""
-        INSERT INTO clients (name, phone, email, cpf, birth_date, notes)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (c.name, clean_phone, c.email, c.cpf, c.birth_date, c.notes))
-    new_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return {"success": True, "id": new_id, "name": c.name}
-
-@app.put("/api/admin/clients/{client_id}")
-def update_client(client_id: int, c: ClientCreateOrUpdate, _=Depends(verify_admin)):
-    conn = get_db()
-    clean_phone = "".join(filter(str.isdigit, c.phone))
-    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
-        clean_phone = "55" + clean_phone
-
-    conn.execute("""
-        UPDATE clients
-        SET name = ?, phone = ?, email = ?, cpf = ?, birth_date = ?, notes = ?
-        WHERE id = ?
-    """, (c.name, clean_phone, c.email, c.cpf, c.birth_date, c.notes, client_id))
-    conn.commit()
-    conn.close()
-    return {"success": True, "id": client_id}
-
-@app.delete("/api/admin/clients/{client_id}")
-def delete_client(client_id: int, _=Depends(verify_admin)):
-    conn = get_db()
-    conn.execute("DELETE FROM appointments WHERE client_id = ?", (client_id,))
-    conn.execute("DELETE FROM client_packages WHERE client_id = ?", (client_id,))
-    conn.execute("DELETE FROM anamnese_forms WHERE client_id = ?", (client_id,))
-    conn.execute("DELETE FROM clients WHERE id = ?", (client_id,))
-    conn.commit()
-    conn.close()
-    return {"success": True, "id": client_id}
-
-# --- Ficha de Anamnese / Avaliação de Depilação a Laser (Luz e Pele) ---
-
-@app.get("/api/admin/clients/{client_id}/anamnese")
-def get_client_anamnese(client_id: int, _=Depends(verify_admin)):
-    conn = get_db()
-    client = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
-    if not client:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
-
-    form = conn.execute("SELECT * FROM anamnese_forms WHERE client_id = ?", (client_id,)).fetchone()
-    conn.close()
-
-    return {
-        "client": dict(client),
-        "anamnese": dict(form) if form else None
-    }
-
-@app.post("/api/admin/clients/{client_id}/anamnese")
-def save_client_anamnese(client_id: int, form: AnamneseFormModel, _=Depends(verify_admin)):
-    conn = get_db()
-    cursor = conn.cursor()
-
-    client = cursor.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
-    if not client:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
-
-    # Atualiza também dados cadastrais básicos no cliente se vierem da ficha
-    if form.instagram:
-        cursor.execute("UPDATE clients SET notes = COALESCE(notes, '') WHERE id = ?", (client_id,))
-
-    existing = cursor.execute("SELECT id FROM anamnese_forms WHERE client_id = ?", (client_id,)).fetchone()
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    if existing:
-        cursor.execute("""
-            UPDATE anamnese_forms
-            SET contract_number = ?, sexo = ?, endereco = ?, bairro = ?, cep = ?, cidade = ?, uf = ?,
-                tel_fixo = ?, instagram = ?, profissao = ?, como_conheceu = ?, tipo_tratamento = ?,
-                areas_tratamento = ?, exposicao_sol_48h = ?, historico_patologias = ?,
-                questionario_medico = ?, reacao_solar = ?, signature_name = ?, signature_date = ?,
-                signature_image = COALESCE(NULLIF(?, ''), signature_image),
-                updated_at = ?
-            WHERE client_id = ?
-        """, (
-            form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
-            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
-            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
-            form.questionario_medico, form.reacao_solar, form.signature_name, form.signature_date or now_str,
-            form.signature_image or "", now_str, client_id
-        ))
-    else:
-        cursor.execute("""
-            INSERT INTO anamnese_forms (
-                client_id, contract_number, sexo, endereco, bairro, cep, cidade, uf,
-                tel_fixo, instagram, profissao, como_conheceu, tipo_tratamento,
-                areas_tratamento, exposicao_sol_48h, historico_patologias,
-                questionario_medico, reacao_solar, signature_name, signature_date,
-                signature_image, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            client_id, form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
-            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
-            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
-            form.questionario_medico, form.reacao_solar, form.signature_name, form.signature_date or now_str,
-            form.signature_image or "", now_str, now_str
-        ))
-
-    conn.commit()
-    conn.close()
-    return {"success": True, "message": "Ficha de Anamnese salva com sucesso!"}
-
-# --- Endpoint Público de Preenchimento e Assinatura de Ficha pelo Cliente ---
-
-@app.post("/api/client/ficha")
-def client_submit_ficha(form: PublicClientFichaSubmit):
+def process_client_ficha(clinic_id: int, form: PublicClientFichaSubmit):
     name = form.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Por favor, preencha o seu nome completo.")
@@ -768,8 +734,7 @@ def client_submit_ficha(form: PublicClientFichaSubmit):
     conn = get_db()
     cursor = conn.cursor()
 
-    # Procura se o cliente já existe por WhatsApp ou cadastra novo
-    client = cursor.execute("SELECT id FROM clients WHERE phone = ?", (clean_phone,)).fetchone()
+    client = cursor.execute("SELECT id FROM clients WHERE clinic_id = ? AND phone = ?", (clinic_id, clean_phone)).fetchone()
     if client:
         client_id = client["id"]
         cursor.execute("""
@@ -778,17 +743,17 @@ def client_submit_ficha(form: PublicClientFichaSubmit):
                 email = CASE WHEN ? != '' THEN ? ELSE email END,
                 cpf = CASE WHEN ? != '' THEN ? ELSE cpf END,
                 birth_date = CASE WHEN ? != '' THEN ? ELSE birth_date END
-            WHERE id = ?
-        """, (name, form.email or "", form.email or "", form.cpf or "", form.cpf or "", form.birth_date or "", form.birth_date or "", client_id))
+            WHERE id = ? AND clinic_id = ?
+        """, (name, form.email or "", form.email or "", form.cpf or "", form.cpf or "", form.birth_date or "", form.birth_date or "", client_id, clinic_id))
     else:
         cursor.execute("""
-            INSERT INTO clients (name, phone, email, cpf, birth_date)
-            VALUES (?, ?, ?, ?, ?)
-        """, (name, clean_phone, form.email or "", form.cpf or "", form.birth_date or ""))
+            INSERT INTO clients (clinic_id, name, phone, email, cpf, birth_date)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (clinic_id, name, clean_phone, form.email or "", form.cpf or "", form.birth_date or ""))
         client_id = cursor.lastrowid
 
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    existing_anamnese = cursor.execute("SELECT id FROM anamnese_forms WHERE client_id = ?", (client_id,)).fetchone()
+    existing_anamnese = cursor.execute("SELECT id FROM anamnese_forms WHERE clinic_id = ? AND client_id = ?", (clinic_id, client_id)).fetchone()
 
     if existing_anamnese:
         cursor.execute("""
@@ -799,25 +764,25 @@ def client_submit_ficha(form: PublicClientFichaSubmit):
                 questionario_medico = ?, reacao_solar = ?, signature_name = ?, signature_date = ?,
                 signature_image = CASE WHEN ? != '' THEN ? ELSE signature_image END,
                 updated_at = ?
-            WHERE client_id = ?
+            WHERE id = ? AND clinic_id = ?
         """, (
             form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
             form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
             form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
             form.questionario_medico, form.reacao_solar, form.signature_name or name,
-            form.signature_date or now_str, form.signature_image or "", form.signature_image or "", now_str, client_id
+            form.signature_date or now_str, form.signature_image or "", form.signature_image or "", now_str, existing_anamnese["id"], clinic_id
         ))
     else:
         cursor.execute("""
             INSERT INTO anamnese_forms (
-                client_id, contract_number, sexo, endereco, bairro, cep, cidade, uf,
+                clinic_id, client_id, contract_number, sexo, endereco, bairro, cep, cidade, uf,
                 tel_fixo, instagram, profissao, como_conheceu, tipo_tratamento,
                 areas_tratamento, exposicao_sol_48h, historico_patologias,
                 questionario_medico, reacao_solar, signature_name, signature_date,
                 signature_image, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            client_id, form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            clinic_id, client_id, form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
             form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
             form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
             form.questionario_medico, form.reacao_solar, form.signature_name or name,
@@ -828,45 +793,482 @@ def client_submit_ficha(form: PublicClientFichaSubmit):
     conn.close()
     return {"success": True, "client_id": client_id, "name": name, "message": "Ficha e assinatura digital registradas com sucesso!"}
 
-@app.get("/api/client/ficha")
-def client_get_ficha(phone: Optional[str] = None, client_id: Optional[int] = None):
+def process_client_get_ficha(clinic_id: int, phone: Optional[str] = None, client_id: Optional[int] = None):
     if not phone and not client_id:
         return {"client": None, "anamnese": None}
     conn = get_db()
     client = None
     if client_id:
-        client = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+        client = conn.execute("SELECT * FROM clients WHERE clinic_id = ? AND id = ?", (clinic_id, client_id)).fetchone()
     elif phone:
         clean_phone = "".join(filter(str.isdigit, phone))
         if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
             clean_phone = "55" + clean_phone
-        client = conn.execute("SELECT * FROM clients WHERE phone = ? OR phone LIKE ?", (clean_phone, f"%{clean_phone}%")).fetchone()
+        client = conn.execute("SELECT * FROM clients WHERE clinic_id = ? AND (phone = ? OR phone LIKE ?)", (clinic_id, clean_phone, f"%{clean_phone}%")).fetchone()
 
     if not client:
         conn.close()
         return {"client": None, "anamnese": None}
 
     c_id = client["id"]
-    anamnese = conn.execute("SELECT * FROM anamnese_forms WHERE client_id = ?", (c_id,)).fetchone()
+    anamnese = conn.execute("SELECT * FROM anamnese_forms WHERE clinic_id = ? AND client_id = ?", (clinic_id, c_id)).fetchone()
     conn.close()
     return {
         "client": dict(client),
         "anamnese": dict(anamnese) if anamnese else None
     }
 
-# --- Controle de Pacotes de Clientes (Sessões Realizadas e Restantes) ---
+# --- Endpoints de Autenticação & Cadastro de Clínicas (SaaS) ---
+
+@app.post("/api/auth/register-clinic")
+def register_clinic(data: RegisterClinicRequest):
+    clinic_name = data.clinic_name.strip()
+    owner_name = data.owner_name.strip()
+    email = data.email.strip().lower()
+    password = data.password.strip()
+
+    if not clinic_name or not owner_name or not email or not password:
+        raise HTTPException(status_code=400, detail="Por favor, preencha todos os campos obrigatórios.")
+    if len(password) < 4:
+        raise HTTPException(status_code=400, detail="A senha deve ter no mínimo 4 caracteres.")
+
+    raw_slug = data.slug.strip() if data.slug else clinic_name
+    base_slug = slugify(raw_slug)
+    slug = base_slug
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    existing_user = cursor.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    if existing_user:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Este e-mail já está cadastrado. Por favor faça login.")
+
+    idx = 1
+    while cursor.execute("SELECT id FROM clinics WHERE slug = ?", (slug,)).fetchone():
+        slug = f"{base_slug}-{idx}"
+        idx += 1
+
+    trial_end = (datetime.datetime.now() + datetime.timedelta(days=15)).strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("""
+        INSERT INTO clinics (name, slug, phone, plan, subscription_status, trial_ends_at)
+        VALUES (?, ?, ?, 'trial', 'active', ?)
+    """, (clinic_name, slug, data.phone or "", trial_end))
+    clinic_id = cursor.lastrowid
+
+    pwd_hash = hash_password(password)
+    cursor.execute("""
+        INSERT INTO users (clinic_id, name, email, password_hash, role, is_superadmin)
+        VALUES (?, ?, ?, ?, 'owner', 0)
+    """, (clinic_id, owner_name, email, pwd_hash))
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+
+    seed_default_services_for_clinic(clinic_id)
+
+    token = create_token({
+        "user_id": user_id,
+        "clinic_id": clinic_id,
+        "role": "owner",
+        "name": owner_name,
+        "email": email
+    })
+
+    return {
+        "success": True,
+        "token": token,
+        "user": {"id": user_id, "name": owner_name, "email": email, "role": "owner"},
+        "clinic": {"id": clinic_id, "name": clinic_name, "slug": slug, "plan": "trial", "trial_ends_at": trial_end}
+    }
+
+@app.post("/api/auth/login")
+def auth_login(data: LoginRequest):
+    conn = get_db()
+    if data.pin:
+        if data.pin == ADMIN_PIN:
+            user = conn.execute("SELECT * FROM users WHERE clinic_id = 1 LIMIT 1").fetchone()
+            clinic = conn.execute("SELECT * FROM clinics WHERE id = 1").fetchone()
+            conn.close()
+            user_id = user["id"] if user else 1
+            user_name = user["name"] if user else "Administrador"
+            token = create_token({"user_id": user_id, "clinic_id": 1, "role": "owner", "name": user_name, "email": "admin@laserglow.com"})
+            return {
+                "authenticated": True,
+                "token": token,
+                "user": {"id": user_id, "name": user_name, "email": "admin@laserglow.com", "role": "owner"},
+                "clinic": dict(clinic) if clinic else {"id": 1, "name": "LaserGlow Clinic", "slug": "laserglow"}
+            }
+        else:
+            conn.close()
+            raise HTTPException(status_code=401, detail="Senha PIN incorreta.")
+
+    email = (data.email or "").strip().lower()
+    password = data.password or ""
+    if not email or not password:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Informe o e-mail e a senha.")
+
+    user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
+
+    if not verify_password(password, user["password_hash"]):
+        conn.close()
+        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
+
+    clinic = conn.execute("SELECT * FROM clinics WHERE id = ?", (user["clinic_id"],)).fetchone()
+    conn.close()
+
+    token = create_token({
+        "user_id": user["id"],
+        "clinic_id": user["clinic_id"],
+        "role": user["role"],
+        "name": user["name"],
+        "email": user["email"]
+    })
+
+    return {
+        "authenticated": True,
+        "token": token,
+        "user": {"id": user["id"], "name": user["name"], "email": user["email"], "role": user["role"]},
+        "clinic": dict(clinic) if clinic else {"id": user["clinic_id"], "name": "Clínica", "slug": "clinica"}
+    }
+
+@app.get("/api/admin/me")
+def get_current_user_and_clinic(current_user: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic = conn.execute("SELECT * FROM clinics WHERE id = ?", (current_user["clinic_id"],)).fetchone()
+    conn.close()
+    return {
+        "user": {
+            "id": current_user["id"],
+            "name": current_user["name"],
+            "email": current_user["email"],
+            "role": current_user["role"],
+            "is_superadmin": current_user.get("is_superadmin", 0)
+        },
+        "clinic": dict(clinic) if clinic else current_user.get("clinic")
+    }
+
+@app.post("/api/admin/login")
+def admin_login_legacy(data: AdminLoginRequest):
+    return auth_login(LoginRequest(pin=data.pin))
+
+# --- Endpoints Públicos Multi-Clínica (/api/public/{slug}/...) ---
+
+@app.get("/api/public/{slug}/settings")
+def public_get_clinic_settings(slug: str):
+    return get_clinic_by_slug(slug)
+
+@app.get("/api/public/{slug}/services")
+def public_list_services(slug: str):
+    clinic = get_clinic_by_slug(slug)
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM services WHERE clinic_id = ? ORDER BY category DESC, price ASC", (clinic["id"],)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/public/{slug}/available-slots")
+def public_get_available_slots(slug: str, date: str):
+    clinic = get_clinic_by_slug(slug)
+    return compute_available_slots(clinic, date)
+
+@app.post("/api/public/{slug}/book")
+def public_book_appointment(slug: str, data: BookingRequest):
+    clinic = get_clinic_by_slug(slug)
+    return process_booking(clinic["id"], data)
+
+@app.post("/api/public/{slug}/ficha")
+def public_submit_ficha(slug: str, form: PublicClientFichaSubmit):
+    clinic = get_clinic_by_slug(slug)
+    return process_client_ficha(clinic["id"], form)
+
+@app.get("/api/public/{slug}/ficha")
+def public_get_ficha(slug: str, phone: Optional[str] = None, client_id: Optional[int] = None):
+    clinic = get_clinic_by_slug(slug)
+    return process_client_get_ficha(clinic["id"], phone, client_id)
+
+# --- Endpoints Legados (Clínica 1) ---
+
+@app.get("/api/settings")
+def get_clinic_settings():
+    conn = get_db()
+    row = conn.execute("SELECT * FROM clinics WHERE id = 1").fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return public_get_clinic_settings("laserglow")
+
+@app.get("/api/services")
+def list_services():
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM services WHERE clinic_id = 1 ORDER BY category DESC, price ASC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/available-slots")
+def get_available_slots(date: str):
+    clinic = get_clinic_by_id(1)
+    return compute_available_slots(clinic, date)
+
+@app.post("/api/book")
+def book_appointment(data: BookingRequest):
+    return process_booking(1, data)
+
+@app.post("/api/client/ficha")
+def client_submit_ficha(form: PublicClientFichaSubmit):
+    return process_client_ficha(1, form)
+
+@app.get("/api/client/ficha")
+def client_get_ficha(phone: Optional[str] = None, client_id: Optional[int] = None):
+    return process_client_get_ficha(1, phone, client_id)
+
+# --- Endpoints Administrativos Protegidos (Isolados por Tenant) ---
+
+@app.get("/api/admin/settings")
+def get_admin_clinic_settings(admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM clinics WHERE id = ?", (admin["clinic_id"],)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Clínica não encontrada.")
+    return dict(row)
+
+@app.put("/api/admin/settings")
+def update_clinic_settings(settings: ClinicSettingsUpdate, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    conn.execute("""
+        UPDATE clinics
+        SET name = ?, subtitle = ?, logo_url = ?, phone = ?, instagram = ?,
+            opening_time = ?, closing_time = ?, slot_interval_minutes = ?,
+            has_lunch_break = ?, lunch_start = ?, lunch_end = ?, working_days = ?
+        WHERE id = ?
+    """, (
+        settings.name, settings.subtitle, settings.logo_url, settings.phone, settings.instagram,
+        settings.opening_time or '08:00',
+        settings.closing_time or '18:00',
+        settings.slot_interval_minutes or 30,
+        settings.has_lunch_break or 0,
+        settings.lunch_start or '12:00',
+        settings.lunch_end or '13:00',
+        settings.working_days or '["1","2","3","4","5","6"]',
+        admin["clinic_id"]
+    ))
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Configurações e horários salvos com sucesso!"}
+
+@app.post("/api/admin/upload-logo")
+async def upload_logo(file: UploadFile = File(...), admin: dict = Depends(verify_admin)):
+    extension = os.path.splitext(file.filename)[1].lower()
+    if extension not in [".png", ".jpg", ".jpeg", ".svg", ".webp"]:
+        raise HTTPException(status_code=400, detail="Formato de imagem inválido. Use PNG, JPG ou SVG.")
+
+    filename = f"logo_{admin['clinic_id']}_{int(datetime.datetime.now().timestamp())}{extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    logo_url = f"/static/uploads/{filename}"
+
+    conn = get_db()
+    conn.execute("UPDATE clinics SET logo_url = ? WHERE id = ?", (logo_url, admin["clinic_id"]))
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "logo_url": logo_url}
+
+@app.get("/api/appointments")
+def list_appointments(date: Optional[str] = None, status: Optional[str] = None, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    query = """
+        SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.notes, a.created_at,
+               c.id as client_id, c.name as client_name, c.phone as client_phone, c.email as client_email,
+               s.id as service_id, s.name as service_name, s.category as service_category, s.price as service_price, s.duration_minutes
+        FROM appointments a
+        JOIN clients c ON a.client_id = c.id
+        JOIN services s ON a.service_id = s.id
+        WHERE a.clinic_id = ?
+    """
+    params = [admin["clinic_id"]]
+    if date:
+        query += " AND a.appointment_date = ?"
+        params.append(date)
+    if status and status != 'todos':
+        query += " AND a.status = ?"
+        params.append(status)
+
+    query += " ORDER BY a.appointment_date DESC, a.appointment_time ASC"
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+# --- Gestão de Clientes do Tenant ---
+@app.get("/api/clients")
+def list_clients(admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic_id = admin["clinic_id"]
+    query = """
+        SELECT c.*,
+               COUNT(DISTINCT a.id) as total_appointments,
+               MAX(a.appointment_date) as last_appointment_date,
+               COALESCE((
+                   SELECT COUNT(*) FROM client_packages cp WHERE cp.client_id = c.id AND cp.status = 'ativo' AND cp.clinic_id = ?
+               ), 0) as active_packages_count,
+               COALESCE((
+                   SELECT SUM(cf.amount) FROM cash_flow cf WHERE cf.client_id = c.id AND cf.type = 'entrada' AND cf.clinic_id = ?
+               ), 0) as total_spent
+        FROM clients c
+        LEFT JOIN appointments a ON (c.id = a.client_id AND a.clinic_id = ?)
+        WHERE c.clinic_id = ?
+        GROUP BY c.id
+        ORDER BY c.name ASC
+    """
+    rows = conn.execute(query, (clinic_id, clinic_id, clinic_id, clinic_id)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/admin/clients")
+def create_client(c: ClientCreateOrUpdate, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
+
+    clean_phone = "".join(filter(str.isdigit, c.phone))
+    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
+        clean_phone = "55" + clean_phone
+
+    existing = cursor.execute("SELECT id FROM clients WHERE clinic_id = ? AND phone = ?", (clinic_id, clean_phone)).fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Já existe um cliente cadastrado com este telefone/WhatsApp na sua clínica.")
+
+    cursor.execute("""
+        INSERT INTO clients (clinic_id, name, phone, email, cpf, birth_date, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (clinic_id, c.name, clean_phone, c.email, c.cpf, c.birth_date, c.notes))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": new_id, "name": c.name}
+
+@app.put("/api/admin/clients/{client_id}")
+def update_client(client_id: int, c: ClientCreateOrUpdate, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic_id = admin["clinic_id"]
+    clean_phone = "".join(filter(str.isdigit, c.phone))
+    if not clean_phone.startswith("55") and len(clean_phone) in (10, 11):
+        clean_phone = "55" + clean_phone
+
+    conn.execute("""
+        UPDATE clients
+        SET name = ?, phone = ?, email = ?, cpf = ?, birth_date = ?, notes = ?
+        WHERE id = ? AND clinic_id = ?
+    """, (c.name, clean_phone, c.email, c.cpf, c.birth_date, c.notes, client_id, clinic_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": client_id}
+
+@app.delete("/api/admin/clients/{client_id}")
+def delete_client(client_id: int, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic_id = admin["clinic_id"]
+    conn.execute("DELETE FROM appointments WHERE client_id = ? AND clinic_id = ?", (client_id, clinic_id))
+    conn.execute("DELETE FROM client_packages WHERE client_id = ? AND clinic_id = ?", (client_id, clinic_id))
+    conn.execute("DELETE FROM anamnese_forms WHERE client_id = ? AND clinic_id = ?", (client_id, clinic_id))
+    conn.execute("DELETE FROM clients WHERE id = ? AND clinic_id = ?", (client_id, clinic_id))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": client_id}
+
+# --- Ficha de Anamnese do Tenant ---
+
+@app.get("/api/admin/clients/{client_id}/anamnese")
+def get_client_anamnese(client_id: int, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic_id = admin["clinic_id"]
+    client = conn.execute("SELECT * FROM clients WHERE id = ? AND clinic_id = ?", (client_id, clinic_id)).fetchone()
+    if not client:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
+    form = conn.execute("SELECT * FROM anamnese_forms WHERE client_id = ? AND clinic_id = ?", (client_id, clinic_id)).fetchone()
+    conn.close()
+
+    return {
+        "client": dict(client),
+        "anamnese": dict(form) if form else None
+    }
+
+@app.post("/api/admin/clients/{client_id}/anamnese")
+def save_client_anamnese(client_id: int, form: AnamneseFormModel, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
+
+    client = cursor.execute("SELECT * FROM clients WHERE id = ? AND clinic_id = ?", (client_id, clinic_id)).fetchone()
+    if not client:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+
+    existing = cursor.execute("SELECT id FROM anamnese_forms WHERE client_id = ? AND clinic_id = ?", (client_id, clinic_id)).fetchone()
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if existing:
+        cursor.execute("""
+            UPDATE anamnese_forms
+            SET contract_number = ?, sexo = ?, endereco = ?, bairro = ?, cep = ?, cidade = ?, uf = ?,
+                tel_fixo = ?, instagram = ?, profissao = ?, como_conheceu = ?, tipo_tratamento = ?,
+                areas_tratamento = ?, exposicao_sol_48h = ?, historico_patologias = ?,
+                questionario_medico = ?, reacao_solar = ?, signature_name = ?, signature_date = ?,
+                signature_image = COALESCE(NULLIF(?, ''), signature_image),
+                updated_at = ?
+            WHERE id = ? AND clinic_id = ?
+        """, (
+            form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
+            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
+            form.questionario_medico, form.reacao_solar, form.signature_name, form.signature_date or now_str,
+            form.signature_image or "", now_str, existing["id"], clinic_id
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO anamnese_forms (
+                clinic_id, client_id, contract_number, sexo, endereco, bairro, cep, cidade, uf,
+                tel_fixo, instagram, profissao, como_conheceu, tipo_tratamento,
+                areas_tratamento, exposicao_sol_48h, historico_patologias,
+                questionario_medico, reacao_solar, signature_name, signature_date,
+                signature_image, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            clinic_id, client_id, form.contract_number, form.sexo, form.endereco, form.bairro, form.cep, form.cidade, form.uf,
+            form.tel_fixo, form.instagram, form.profissao, form.como_conheceu, form.tipo_tratamento,
+            form.areas_tratamento, form.exposicao_sol_48h, form.historico_patologias,
+            form.questionario_medico, form.reacao_solar, form.signature_name, form.signature_date or now_str,
+            form.signature_image or "", now_str, now_str
+        ))
+
+    conn.commit()
+    conn.close()
+    return {"success": True, "message": "Ficha de Anamnese salva com sucesso!"}
+
+# --- Controle de Pacotes de Clientes do Tenant ---
 
 @app.get("/api/admin/client-packages")
-def list_client_packages(client_id: Optional[int] = None, _=Depends(verify_admin)):
+def list_client_packages(client_id: Optional[int] = None, admin: dict = Depends(verify_admin)):
     conn = get_db()
+    clinic_id = admin["clinic_id"]
     query = """
         SELECT cp.*, c.name as client_name, c.phone as client_phone, s.name as service_name
         FROM client_packages cp
         JOIN clients c ON cp.client_id = c.id
         JOIN services s ON cp.service_id = s.id
-        WHERE 1=1
+        WHERE cp.clinic_id = ?
     """
-    params = []
+    params = [clinic_id]
     if client_id:
         query += " AND cp.client_id = ?"
         params.append(client_id)
@@ -876,43 +1278,44 @@ def list_client_packages(client_id: Optional[int] = None, _=Depends(verify_admin
     return [dict(r) for r in rows]
 
 @app.post("/api/admin/client-packages")
-def sell_client_package(req: SellPackageRequest, _=Depends(verify_admin)):
+def sell_client_package(req: SellPackageRequest, admin: dict = Depends(verify_admin)):
     conn = get_db()
     cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
 
-    service = cursor.execute("SELECT * FROM services WHERE id = ?", (req.service_id,)).fetchone()
+    service = cursor.execute("SELECT * FROM services WHERE id = ? AND clinic_id = ?", (req.service_id, clinic_id)).fetchone()
     if not service:
         conn.close()
         raise HTTPException(status_code=404, detail="Pacote/Procedimento não encontrado.")
 
     total_sessions = service["sessions_count"] or 10
 
-    # Cria o pacote para o cliente
     cursor.execute("""
-        INSERT INTO client_packages (client_id, service_id, total_sessions, completed_sessions, price_paid, payment_method, status, notes)
-        VALUES (?, ?, ?, 0, ?, ?, 'ativo', ?)
-    """, (req.client_id, req.service_id, total_sessions, req.price_paid, req.payment_method, req.notes))
+        INSERT INTO client_packages (clinic_id, client_id, service_id, total_sessions, completed_sessions, price_paid, payment_method, status, notes)
+        VALUES (?, ?, ?, ?, 0, ?, ?, 'ativo', ?)
+    """, (clinic_id, req.client_id, req.service_id, total_sessions, req.price_paid, req.payment_method, req.notes))
     pkg_id = cursor.lastrowid
 
-    # Lança automaticamente no Fluxo de Caixa como entrada
-    client = cursor.execute("SELECT name FROM clients WHERE id = ?", (req.client_id,)).fetchone()
+    client = cursor.execute("SELECT name FROM clients WHERE id = ? AND clinic_id = ?", (req.client_id, clinic_id)).fetchone()
     client_name = client["name"] if client else "Cliente"
     today_str = datetime.date.today().strftime("%Y-%m-%d")
 
     cursor.execute("""
-        INSERT INTO cash_flow (type, category, description, amount, payment_method, transaction_date, client_id)
-        VALUES ('entrada', 'Venda de Pacote', ?, ?, ?, ?, ?)
-    """, (f"Pacote {service['name']} - {client_name}", req.price_paid, req.payment_method, today_str, req.client_id))
+        INSERT INTO cash_flow (clinic_id, type, category, description, amount, payment_method, transaction_date, client_id)
+        VALUES (?, 'entrada', 'Venda de Pacote', ?, ?, ?, ?, ?)
+    """, (clinic_id, f"Pacote {service['name']} - {client_name}", req.price_paid, req.payment_method, today_str, req.client_id))
 
     conn.commit()
     conn.close()
     return {"success": True, "id": pkg_id}
 
 @app.post("/api/admin/client-packages/{pkg_id}/consume-session")
-def consume_package_session(pkg_id: int, _=Depends(verify_admin)):
+def consume_package_session(pkg_id: int, admin: dict = Depends(verify_admin)):
     conn = get_db()
     cursor = conn.cursor()
-    pkg = cursor.execute("SELECT * FROM client_packages WHERE id = ?", (pkg_id,)).fetchone()
+    clinic_id = admin["clinic_id"]
+
+    pkg = cursor.execute("SELECT * FROM client_packages WHERE id = ? AND clinic_id = ?", (pkg_id, clinic_id)).fetchone()
     if not pkg:
         conn.close()
         raise HTTPException(status_code=404, detail="Pacote não encontrado.")
@@ -924,31 +1327,31 @@ def consume_package_session(pkg_id: int, _=Depends(verify_admin)):
     cursor.execute("""
         UPDATE client_packages
         SET completed_sessions = ?, status = ?
-        WHERE id = ?
-    """, (completed, new_status, pkg_id))
+        WHERE id = ? AND clinic_id = ?
+    """, (completed, new_status, pkg_id, clinic_id))
     conn.commit()
     conn.close()
     return {"success": True, "completed_sessions": completed, "total_sessions": total, "status": new_status}
 
-# --- Fluxo de Caixa (Financeiro) ---
+# --- Fluxo de Caixa do Tenant ---
 
 @app.get("/api/admin/cash-flow")
-def list_cash_flow(month: Optional[str] = None, _=Depends(verify_admin)):
+def list_cash_flow(month: Optional[str] = None, admin: dict = Depends(verify_admin)):
     conn = get_db()
+    clinic_id = admin["clinic_id"]
     query = """
         SELECT cf.*, c.name as client_name
         FROM cash_flow cf
         LEFT JOIN clients c ON cf.client_id = c.id
-        WHERE 1=1
+        WHERE cf.clinic_id = ?
     """
-    params = []
+    params = [clinic_id]
     if month:
         query += " AND cf.transaction_date LIKE ?"
         params.append(f"{month}%")
     query += " ORDER BY cf.transaction_date DESC, cf.id DESC"
     rows = conn.execute(query, params).fetchall()
 
-    # Totais
     total_entradas = sum(r["amount"] for r in rows if r["type"] == "entrada")
     total_saidas = sum(r["amount"] for r in rows if r["type"] == "saida")
     saldo_liquido = total_entradas - total_saidas
@@ -964,80 +1367,77 @@ def list_cash_flow(month: Optional[str] = None, _=Depends(verify_admin)):
     }
 
 @app.post("/api/admin/cash-flow")
-def add_cash_flow_entry(entry: CashFlowEntry, _=Depends(verify_admin)):
+def add_cash_flow_entry(entry: CashFlowEntry, admin: dict = Depends(verify_admin)):
     conn = get_db()
     cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
+
     cursor.execute("""
-        INSERT INTO cash_flow (type, category, description, amount, payment_method, transaction_date, client_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (entry.type, entry.category, entry.description, entry.amount, entry.payment_method, entry.transaction_date, entry.client_id))
+        INSERT INTO cash_flow (clinic_id, type, category, description, amount, payment_method, transaction_date, client_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (clinic_id, entry.type, entry.category, entry.description, entry.amount, entry.payment_method, entry.transaction_date, entry.client_id))
     new_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return {"success": True, "id": new_id}
 
 @app.delete("/api/admin/cash-flow/{entry_id}")
-def delete_cash_flow_entry(entry_id: int, _=Depends(verify_admin)):
+def delete_cash_flow_entry(entry_id: int, admin: dict = Depends(verify_admin)):
     conn = get_db()
-    conn.execute("DELETE FROM cash_flow WHERE id = ?", (entry_id,))
+    clinic_id = admin["clinic_id"]
+    conn.execute("DELETE FROM cash_flow WHERE id = ? AND clinic_id = ?", (entry_id, clinic_id))
     conn.commit()
     conn.close()
     return {"success": True, "id": entry_id}
 
-# --- Inteligência de Clínica: Análise de Clientes, Ticket Médio & Retenção (Evitar Perdas) ---
+# --- Inteligência de Clínica e Análises do Tenant ---
 
 @app.get("/api/admin/analytics")
-def get_clinic_analytics(_=Depends(verify_admin)):
+def get_clinic_analytics(admin: dict = Depends(verify_admin)):
     conn = get_db()
+    clinic_id = admin["clinic_id"]
 
-    # 1. Total faturado e ticket médio
-    total_revenue_row = conn.execute("SELECT SUM(amount) as total, COUNT(*) as count FROM cash_flow WHERE type = 'entrada'").fetchone()
+    total_revenue_row = conn.execute("SELECT SUM(amount) as total, COUNT(*) as count FROM cash_flow WHERE clinic_id = ? AND type = 'entrada'", (clinic_id,)).fetchone()
     total_revenue = total_revenue_row["total"] or 0
     total_sales = total_revenue_row["count"] or 0
 
-    # Contagem de clientes únicos compradores
-    buyers_count = conn.execute("SELECT COUNT(DISTINCT client_id) FROM cash_flow WHERE type = 'entrada' AND client_id IS NOT NULL").fetchone()[0] or 1
+    buyers_count = conn.execute("SELECT COUNT(DISTINCT client_id) FROM cash_flow WHERE clinic_id = ? AND type = 'entrada' AND client_id IS NOT NULL", (clinic_id,)).fetchone()[0] or 1
     ticket_medio_cliente = round(total_revenue / buyers_count, 2) if buyers_count > 0 else 0
     ticket_medio_venda = round(total_revenue / total_sales, 2) if total_sales > 0 else 0
 
-    # 2. Taxa de No-Show / Cancelamento
-    total_apps = conn.execute("SELECT COUNT(*) FROM appointments").fetchone()[0] or 1
-    cancelled_apps = conn.execute("SELECT COUNT(*) FROM appointments WHERE status = 'cancelado'").fetchone()[0] or 0
+    total_apps = conn.execute("SELECT COUNT(*) FROM appointments WHERE clinic_id = ?", (clinic_id,)).fetchone()[0] or 1
+    cancelled_apps = conn.execute("SELECT COUNT(*) FROM appointments WHERE clinic_id = ? AND status = 'cancelado'", (clinic_id,)).fetchone()[0] or 0
     no_show_rate = round((cancelled_apps / total_apps) * 100, 1)
 
-    # 3. Pacotes com sessões quase acabando (Oportunidade de Renovação / Upsell)
-    # Ex: Pacotes com 7 ou mais sessões concluídas de 10
     renewal_opportunities = conn.execute("""
         SELECT cp.id, cp.completed_sessions, cp.total_sessions, c.id as client_id, c.name, c.phone, s.name as service_name
         FROM client_packages cp
         JOIN clients c ON cp.client_id = c.id
         JOIN services s ON cp.service_id = s.id
-        WHERE cp.status = 'ativo' AND cp.completed_sessions >= (cp.total_sessions - 3)
-    """).fetchall()
+        WHERE cp.clinic_id = ? AND cp.status = 'ativo' AND cp.completed_sessions >= (cp.total_sessions - 3)
+    """, (clinic_id,)).fetchall()
 
-    # 4. Clientes em Risco de Perda (Inativos há mais de 30 dias para laser)
-    # Depilação a laser requer sessões a cada 30 a 45 dias. Passou disso, há risco de abandono do tratamento!
     cutoff_date = (datetime.date.today() - datetime.timedelta(days=30)).strftime("%Y-%m-%d")
     at_risk_clients = conn.execute("""
         SELECT c.id, c.name, c.phone, MAX(a.appointment_date) as last_date,
                CAST((julianday('now') - julianday(MAX(a.appointment_date))) AS INTEGER) as days_inactive
         FROM clients c
         JOIN appointments a ON c.id = a.client_id
-        WHERE a.status IN ('concluido', 'agendado', 'confirmado')
+        WHERE c.clinic_id = ? AND a.clinic_id = ? AND a.status IN ('concluido', 'agendado', 'confirmado')
         GROUP BY c.id
         HAVING MAX(a.appointment_date) < ? AND MAX(a.appointment_date) IS NOT NULL
         ORDER BY last_date ASC
-    """, (cutoff_date,)).fetchall()
+    """, (clinic_id, clinic_id, cutoff_date)).fetchall()
 
-    # 5. Top 5 Procedimentos mais procurados
     top_services = conn.execute("""
         SELECT s.name, COUNT(a.id) as total_bookings, SUM(s.price) as generated_revenue
         FROM appointments a
         JOIN services s ON a.service_id = s.id
+        WHERE a.clinic_id = ?
         GROUP BY s.id
         ORDER BY total_bookings DESC
         LIMIT 5
-    """).fetchall()
+    """, (clinic_id,)).fetchall()
 
     conn.close()
 
@@ -1055,44 +1455,48 @@ def get_clinic_analytics(_=Depends(verify_admin)):
         "top_services": [dict(r) for r in top_services]
     }
 
-# --- Atualização de Status & Reagendamentos ---
+# --- Atualização de Status & Reagendamentos do Tenant ---
 
 @app.put("/api/appointments/{app_id}/status")
-def update_status(app_id: int, req: StatusUpdateRequest, _=Depends(verify_admin)):
+def update_status(app_id: int, req: StatusUpdateRequest, admin: dict = Depends(verify_admin)):
     conn = get_db()
-    conn.execute("UPDATE appointments SET status = ? WHERE id = ?", (req.status, app_id))
+    conn.execute("UPDATE appointments SET status = ? WHERE id = ? AND clinic_id = ?", (req.status, app_id, admin["clinic_id"]))
     conn.commit()
     conn.close()
     return {"success": True, "id": app_id, "status": req.status}
 
 @app.put("/api/appointments/{app_id}/reschedule")
-def reschedule_appointment(app_id: int, req: RescheduleRequest, _=Depends(verify_admin)):
+def reschedule_appointment(app_id: int, req: RescheduleRequest, admin: dict = Depends(verify_admin)):
     conn = get_db()
     cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
+
     conflict = cursor.execute(
-        "SELECT id FROM appointments WHERE appointment_date = ? AND appointment_time = ? AND status != 'cancelado' AND id != ?",
-        (req.appointment_date, req.appointment_time, app_id)
+        "SELECT id FROM appointments WHERE clinic_id = ? AND appointment_date = ? AND appointment_time = ? AND status != 'cancelado' AND id != ?",
+        (clinic_id, req.appointment_date, req.appointment_time, app_id)
     ).fetchone()
     if conflict:
         conn.close()
         raise HTTPException(status_code=400, detail="Este horário já está ocupado. Escolha outro.")
 
     cursor.execute(
-        "UPDATE appointments SET appointment_date = ?, appointment_time = ?, status = 'agendado' WHERE id = ?",
-        (req.appointment_date, req.appointment_time, app_id)
+        "UPDATE appointments SET appointment_date = ?, appointment_time = ?, status = 'agendado' WHERE id = ? AND clinic_id = ?",
+        (req.appointment_date, req.appointment_time, app_id, clinic_id)
     )
     conn.commit()
     conn.close()
     return {"success": True, "id": app_id, "appointment_date": req.appointment_date, "appointment_time": req.appointment_time}
 
-# Pacotes do Catálogo
+# --- Catálogo de Serviços do Tenant ---
+
 @app.post("/api/admin/services")
-def create_service(s: ServiceItem, _=Depends(verify_admin)):
+def create_service(s: ServiceItem, admin: dict = Depends(verify_admin)):
     conn = get_db()
     cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
     cursor.execute(
-        "INSERT INTO services (name, category, sessions_count, duration_minutes, price) VALUES (?, ?, ?, ?, ?)",
-        (s.name, s.category, s.sessions_count, s.duration_minutes, s.price)
+        "INSERT INTO services (clinic_id, name, category, sessions_count, duration_minutes, price) VALUES (?, ?, ?, ?, ?, ?)",
+        (clinic_id, s.name, s.category, s.sessions_count, s.duration_minutes, s.price)
     )
     new_id = cursor.lastrowid
     conn.commit()
@@ -1100,45 +1504,59 @@ def create_service(s: ServiceItem, _=Depends(verify_admin)):
     return {"success": True, "id": new_id, "name": s.name}
 
 @app.put("/api/admin/services/{service_id}")
-def update_service(service_id: int, s: ServiceItem, _=Depends(verify_admin)):
+def update_service(service_id: int, s: ServiceItem, admin: dict = Depends(verify_admin)):
     conn = get_db()
     cursor = conn.cursor()
+    clinic_id = admin["clinic_id"]
     cursor.execute("""
         UPDATE services 
         SET name = ?, category = ?, sessions_count = ?, duration_minutes = ?, price = ?
-        WHERE id = ?
-    """, (s.name, s.category, s.sessions_count, s.duration_minutes, s.price, service_id))
+        WHERE id = ? AND clinic_id = ?
+    """, (s.name, s.category, s.sessions_count, s.duration_minutes, s.price, service_id, clinic_id))
     conn.commit()
     conn.close()
     return {"success": True, "id": service_id, "name": s.name}
 
 @app.delete("/api/admin/services/{service_id}")
-def delete_service(service_id: int, _=Depends(verify_admin)):
+def delete_service(service_id: int, admin: dict = Depends(verify_admin)):
     conn = get_db()
-    conn.execute("DELETE FROM services WHERE id = ?", (service_id,))
+    clinic_id = admin["clinic_id"]
+    conn.execute("DELETE FROM services WHERE id = ? AND clinic_id = ?", (service_id, clinic_id))
     conn.commit()
     conn.close()
     return {"success": True, "id": service_id}
 
-# Rotas de Arquivos Estáticos com Fallback Seguro
+# --- Rotas de Páginas HTML (Landing, Painel e Agendamento por Clínica) ---
+
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/static/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
-def index_redirect():
+def home_page():
+    landing_file = os.path.join(STATIC_DIR, "landing.html")
+    if os.path.exists(landing_file):
+        return FileResponse(landing_file)
     agendar_file = os.path.join(STATIC_DIR, "agendar.html")
     if os.path.exists(agendar_file):
         return FileResponse(agendar_file)
-    return JSONResponse({"status": "Laser Clinic App está online!", "instrucao": "Arquivos estáticos sendo carregados."})
+    return JSONResponse({"status": "Laser Clinic SaaS está online!"})
 
-@app.get("/agendar")
-def client_booking_page():
-    agendar_file = os.path.join(STATIC_DIR, "agendar.html")
-    if os.path.exists(agendar_file):
-        return FileResponse(agendar_file)
-    raise HTTPException(status_code=404, detail="Página agendar.html não encontrada na pasta static.")
+@app.get("/criar-conta")
+@app.get("/cadastro-clinica")
+def signup_page():
+    signup_file = os.path.join(STATIC_DIR, "signup.html")
+    if os.path.exists(signup_file):
+        return FileResponse(signup_file)
+    admin_file = os.path.join(STATIC_DIR, "admin.html")
+    if os.path.exists(admin_file):
+        return FileResponse(admin_file)
+    raise HTTPException(status_code=404, detail="Página signup.html não encontrada.")
+
+@app.get("/login")
+def login_redirect():
+    return RedirectResponse(url="/admin")
 
 @app.get("/admin")
 def admin_panel_page():
@@ -1147,14 +1565,41 @@ def admin_panel_page():
         return FileResponse(admin_file)
     raise HTTPException(status_code=404, detail="Página admin.html não encontrada na pasta static.")
 
-@app.get("/ficha")
-@app.get("/anamnese")
-@app.get("/cadastro")
-def client_ficha_page():
+# Rotas com slug da clínica
+@app.get("/c/{slug}/agendar")
+def clinic_custom_booking_page(slug: str):
+    get_clinic_by_slug(slug)
+    agendar_file = os.path.join(STATIC_DIR, "agendar.html")
+    if os.path.exists(agendar_file):
+        return FileResponse(agendar_file)
+    raise HTTPException(status_code=404, detail="Página agendar.html não encontrada.")
+
+@app.get("/c/{slug}/ficha")
+@app.get("/c/{slug}/anamnese")
+@app.get("/c/{slug}/cadastro")
+def clinic_custom_ficha_page(slug: str):
+    get_clinic_by_slug(slug)
     ficha_file = os.path.join(STATIC_DIR, "ficha.html")
     if os.path.exists(ficha_file):
         return FileResponse(ficha_file)
-    raise HTTPException(status_code=404, detail="Página ficha.html não encontrada na pasta static.")
+    raise HTTPException(status_code=404, detail="Página ficha.html não encontrada.")
+
+# Rotas legadas para clínica padrão
+@app.get("/agendar")
+def client_booking_page_legacy():
+    agendar_file = os.path.join(STATIC_DIR, "agendar.html")
+    if os.path.exists(agendar_file):
+        return FileResponse(agendar_file)
+    raise HTTPException(status_code=404, detail="Página agendar.html não encontrada.")
+
+@app.get("/ficha")
+@app.get("/anamnese")
+@app.get("/cadastro")
+def client_ficha_page_legacy():
+    ficha_file = os.path.join(STATIC_DIR, "ficha.html")
+    if os.path.exists(ficha_file):
+        return FileResponse(ficha_file)
+    raise HTTPException(status_code=404, detail="Página ficha.html não encontrada.")
 
 if __name__ == "__main__":
     import uvicorn
