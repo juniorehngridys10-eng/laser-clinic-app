@@ -247,6 +247,13 @@
   </main>
 
   <script>
+    function getClinicSlug() {
+      const match = window.location.pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+      if (match) return match[1];
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('c') || urlParams.get('clinic') || null;
+    }
+
     let services = [];
     let currentCategoryFilter = 'all';
     let selectedService = null;
@@ -255,7 +262,9 @@
 
     async function loadServices() {
       try {
-        const res = await fetch('/api/services');
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/services` : '/api/services';
+        const res = await fetch(url);
         services = await res.json();
         renderServicesGrid();
       } catch (err) {
@@ -338,7 +347,9 @@
       const container = document.getElementById('slots-container');
       container.innerHTML = '<div class="col-span-full py-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Consultando horários livres...</div>';
       try {
-        const res = await fetch(`/api/available-slots?date=${date}`);
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/available-slots?date=${date}` : `/api/available-slots?date=${date}`;
+        const res = await fetch(url);
         const data = await res.json();
         container.innerHTML = '';
         
@@ -474,7 +485,9 @@
       btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirmando...';
 
       try {
-        const res = await fetch('/api/book', {
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/book` : '/api/book';
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -513,7 +526,8 @@
         const clinicMsg = encodeURIComponent(`Olá! Acabei de agendar ${data.service_name} para o dia ${d}/${m}/${y} às ${data.appointment_time}. Meu nome é ${data.client_name}.`);
         document.getElementById('btn-whatsapp-confirm').href = `https://wa.me/?text=${clinicMsg}`;
 
-        const fichaLink = `/ficha?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(data.client_name)}`;
+        const fichaBase = slug ? `/c/${slug}/ficha` : '/ficha';
+        const fichaLink = `${fichaBase}?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(data.client_name)}`;
         document.getElementById('btn-preencher-ficha').href = fichaLink;
 
       } catch (err) {
@@ -525,7 +539,9 @@
 
     async function loadClinicSettings() {
       try {
-        const res = await fetch('/api/settings');
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/settings` : '/api/settings';
+        const res = await fetch(url);
         const settings = await res.json();
         if (settings.name) {
           document.title = `Agendamento Online - ${settings.name}`;

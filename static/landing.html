@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laser Clinic - O Sistema Completo de Gestão para Clínicas de Laser & Estética</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased selection:bg-rose-500 selection:text-white">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-gradient-to-r from-rose-600 to-pink-600 text-white text-xs sm:text-sm py-2.5 px-4 text-center font-semibold flex items-center justify-center gap-2">
+    <i class="fa-solid fa-sparkles text-amber-300"></i>
+    <span>Experimente grátis por 15 dias na sua clínica sem precisar de cartão de crédito!</span>
+    <a href="/criar-conta" class="underline font-bold hover:text-rose-100 ml-1">Criar Conta Grátis &rarr;</a>
+  </div>
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-rose-500/30">
+          <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-xl text-white tracking-tight block">Laser Clinic</span>
+          <span class="text-[10px] text-rose-400 font-semibold uppercase tracking-wider block -mt-1">Gestão Inteligente & Agendamento</span>
+        </div>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
+        <a href="#recursos" class="hover:text-rose-400 transition">Recursos</a>
+        <a href="#como-funciona" class="hover:text-rose-400 transition">Como Funciona</a>
+        <a href="#planos" class="hover:text-rose-400 transition">Planos & Preços</a>
+        <a href="#duvidas" class="hover:text-rose-400 transition">Dúvidas</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="/admin" class="text-xs sm:text-sm font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-4 py-2.5 rounded-xl border border-slate-700 transition">
+          Entrar no Painel
+        </a>
+        <a href="/criar-conta" class="text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 px-4 py-2.5 rounded-xl shadow-lg shadow-rose-500/25 transition">
+          Testar Grátis
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative pt-16 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-8 overflow-hidden">
+    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs sm:text-sm font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+      <i class="fa-solid fa-fire text-rose-500"></i> O Sistema Feito Sob Medida para Clínicas de Estética & Laser
+    </div>
+
+    <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight max-w-5xl mx-auto leading-tight sm:leading-none">
+      Acabe com as mensagens perdidas e <span class="bg-gradient-to-r from-rose-400 via-pink-400 to-rose-500 bg-clip-text text-transparent">lote a agenda da sua clínica</span> no piloto automático.
+    </h1>
+
+    <p class="text-base sm:text-xl text-slate-400 max-w-3xl mx-auto font-normal leading-relaxed">
+      Agendamento online 24h com link exclusivo da sua clínica, fichas de anamnese com assinatura digital na tela, controle de pacotes e sessões de laser, fluxo de caixa e relatórios impressos em 1 clique.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+      <a href="/criar-conta" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold text-base shadow-xl shadow-rose-500/30 transition flex items-center justify-center gap-3">
+        <i class="fa-solid fa-sparkles"></i>
+        <span>Começar Teste Grátis de 15 Dias</span>
+      </a>
+      <a href="/c/laserglow/agendar" target="_blank" class="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-base border border-slate-700 transition flex items-center justify-center gap-2">
+        <i class="fa-solid fa-eye text-rose-400"></i>
+        <span>Ver Demonstração do Cliente</span>
+      </a>
+    </div>
+
+    <div class="pt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 font-medium">
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-400"></i> Sem taxa de adesão</span>
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-400"></i> Não precisa de cartão de crédito</span>
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-400"></i> Funciona no celular e computador</span>
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-400"></i> Em conformidade com a LGPD</span>
+    </div>
+
+    <!-- Preview do Dashboard Card -->
+    <div class="mt-12 relative max-w-5xl mx-auto rounded-3xl p-3 sm:p-4 bg-gradient-to-b from-slate-700 to-slate-800 border border-slate-700 shadow-2xl">
+      <div class="bg-slate-950 rounded-2xl p-6 sm:p-8 text-left space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+            <span class="text-xs text-slate-400 font-mono ml-2">painel-da-clinica.laserclinic.com/admin</span>
+          </div>
+          <span class="text-xs bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full font-bold">15 Dias de Degustação Ativa</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Faturamento do Mês</p>
+            <p class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-1">R$ 18.450,00</p>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Agendamentos</p>
+            <p class="text-xl sm:text-2xl font-extrabold text-indigo-400 mt-1">142 sessões</p>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Pacotes Ativos</p>
+            <p class="text-xl sm:text-2xl font-extrabold text-rose-400 mt-1">68 clientes</p>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+            <p class="text-xs text-slate-400 font-medium">Fichas Assinadas</p>
+            <p class="text-xl sm:text-2xl font-extrabold text-amber-400 mt-1">100% digitais</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Seção de Recursos Principais -->
+  <section id="recursos" class="py-20 bg-slate-950 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      <div class="text-center space-y-3 max-w-3xl mx-auto">
+        <h2 class="text-xs font-bold text-rose-400 uppercase tracking-widest">Tudo o que sua clínica precisa</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white">Desenvolvido exclusivamente para o fluxo real do laser e estética</h3>
+        <p class="text-slate-400 text-sm sm:text-base">Sem sistemas complicados cheios de botões inúteis. Apenas as ferramentas que realmente trazem dinheiro e organizam sua rotina.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <!-- Recurso 1 -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 hover:border-rose-500/50 transition space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white">Agendamento Online 24h & Link da Clínica</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Sua cliente escolhe o pacote ou sessão avulsa, seleciona a data e horário disponível e confirma em menos de 1 minuto. Sem você precisar parar o atendimento para responder WhatsApp.
+          </p>
+        </div>
+
+        <!-- Recurso 2 -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 hover:border-rose-500/50 transition space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-pink-500/10 text-pink-500 flex items-center justify-center text-2xl">
+            <i class="fa-solid fa-signature"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white">Ficha de Anamnese com Assinatura na Tela</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            A cliente preenche os dados médicos e assina com o dedo no celular ou mouse. Fica gravado no prontuário com validade legal e termo de consentimento LGPD.
+          </p>
+        </div>
+
+        <!-- Recurso 3 -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 hover:border-rose-500/50 transition space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-2xl">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white">Controle de Pacotes & Consumo de Sessões</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Venda pacotes de 5, 8 ou 10 sessões. A cada sessão realizada, basta 1 clique para consumir e o sistema abate automaticamente no histórico do paciente.
+          </p>
+        </div>
+
+        <!-- Recurso 4 -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 hover:border-rose-500/50 transition space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-2xl">
+            <i class="fa-solid fa-cash-register"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white">Fluxo de Caixa & Financeiro</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Lançamentos automáticos a cada venda de pacote ou consulta. Controle de saídas (custos de manutenção, lâmpadas, descartáveis) e cálculo de faturamento líquido.
+          </p>
+        </div>
+
+        <!-- Recurso 5 -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 hover:border-rose-500/50 transition space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl">
+            <i class="fa-solid fa-print"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white">Impressão de Relatórios & Fichas Médicas</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Imprima fichas de anamnese completas com assinatura e relatórios de faturamento em folhas A4 ou salve em PDF profissional com o logotipo da sua clínica.
+          </p>
+        </div>
+
+        <!-- Recurso 6 -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 hover:border-rose-500/50 transition space-y-4">
+          <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center text-2xl">
+            <i class="fa-brands fa-whatsapp"></i>
+          </div>
+          <h4 class="text-xl font-bold text-white">Mensagens de WhatsApp Pré-Configuradas</h4>
+          <p class="text-slate-400 text-sm leading-relaxed">
+            Envie lembretes de horário, instruções pré-laser (não tomar sol, raspar com lâmina) e mensagens de pós-atendimento direto pelo WhatsApp com 1 clique.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Como Funciona em 3 Passos -->
+  <section id="como-funciona" class="py-20 bg-slate-900 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <h2 class="text-xs font-bold text-rose-400 uppercase tracking-widest">Simples e Rápido</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white">Como começar a usar na sua clínica hoje mesmo</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="bg-slate-950 p-8 rounded-3xl border border-slate-800 space-y-4 relative">
+          <div class="w-10 h-10 rounded-full bg-rose-500 text-white font-extrabold flex items-center justify-center text-lg">1</div>
+          <h4 class="text-xl font-bold text-white">Cadastre sua Clínica</h4>
+          <p class="text-slate-400 text-sm">
+            Informe o nome da sua clínica, seu email e WhatsApp. O sistema cria sua conta na hora com 15 dias grátis e catálogo de laser já configurado.
+          </p>
+        </div>
+
+        <div class="bg-slate-950 p-8 rounded-3xl border border-slate-800 space-y-4 relative">
+          <div class="w-10 h-10 rounded-full bg-rose-500 text-white font-extrabold flex items-center justify-center text-lg">2</div>
+          <h4 class="text-xl font-bold text-white">Divulgue seu Link Exclusivo</h4>
+          <p class="text-slate-400 text-sm">
+            Coloque seu link na bio do Instagram ou envie para suas clientes no WhatsApp. Elas escolhem o serviço e marcam o horário 24 horas por dia.
+          </p>
+        </div>
+
+        <div class="bg-slate-950 p-8 rounded-3xl border border-slate-800 space-y-4 relative">
+          <div class="w-10 h-10 rounded-full bg-rose-500 text-white font-extrabold flex items-center justify-center text-lg">3</div>
+          <h4 class="text-xl font-bold text-white">Gerencie e Acompanhe</h4>
+          <p class="text-slate-400 text-sm">
+            Acompanhe as confirmações de sessões, controle os pacotes de cada cliente, veja o dinheiro entrar no caixa e imprima os relatórios gerenciais.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Planos & Preços (Pricing) -->
+  <section id="planos" class="py-20 bg-slate-950 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+      <div class="text-center space-y-3 max-w-2xl mx-auto">
+        <h2 class="text-xs font-bold text-rose-400 uppercase tracking-widest">Planos Transparentes</h2>
+        <h3 class="text-3xl sm:text-4xl font-extrabold text-white">Investimento que se paga logo no primeiro pacote vendido</h3>
+        <p class="text-slate-400 text-sm sm:text-base">Sem contratos de fidelidade. Cancele quando quiser sem multas.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        
+        <!-- Plano Degustação -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 space-y-6 flex flex-col justify-between">
+          <div class="space-y-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Degustação</span>
+            <h4 class="text-2xl font-bold text-white">15 Dias Grátis</h4>
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-extrabold text-white">R$ 0</span>
+              <span class="text-xs text-slate-400">/ 15 dias</span>
+            </div>
+            <p class="text-slate-400 text-xs">Ideal para testar na prática com suas clientes reais.</p>
+            <ul class="space-y-2.5 text-xs text-slate-300 pt-4 border-t border-slate-800">
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Agendamentos ilimitados</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Fichas de anamnese com assinatura</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Controle de pacotes e sessões</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Fluxo de caixa e faturamento</li>
+            </ul>
+          </div>
+          <a href="/criar-conta" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm text-center block transition border border-slate-700">
+            Começar Grátis
+          </a>
+        </div>
+
+        <!-- Plano Essencial (Destaque) -->
+        <div class="bg-gradient-to-b from-slate-900 to-slate-950 p-8 rounded-3xl border-2 border-rose-500 space-y-6 flex flex-col justify-between relative shadow-2xl shadow-rose-500/10">
+          <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[11px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
+            Mais Escolhido
+          </div>
+          <div class="space-y-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-rose-400">Clínica Individual</span>
+            <h4 class="text-2xl font-bold text-white">Plano Essencial</h4>
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-extrabold text-white">R$ 79</span>
+              <span class="text-xs text-slate-400">/ mês</span>
+            </div>
+            <p class="text-slate-400 text-xs">Perfeito para esteticistas e clínicas de laser em crescimento.</p>
+            <ul class="space-y-2.5 text-xs text-slate-300 pt-4 border-t border-slate-800">
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> <strong>Tudo do plano grátis</strong></li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Link exclusivo personalizado da clínica</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Impressão de relatórios e fichas em A4/PDF</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Upload do seu logotipo profissional</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Backup diário e suporte via WhatsApp</li>
+            </ul>
+          </div>
+          <a href="/criar-conta" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold text-sm text-center block shadow-lg shadow-rose-500/25 transition">
+            Assinar Plano Essencial
+          </a>
+        </div>
+
+        <!-- Plano Pro -->
+        <div class="bg-slate-900 p-8 rounded-3xl border border-slate-800 space-y-6 flex flex-col justify-between">
+          <div class="space-y-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Grandes Espaços</span>
+            <h4 class="text-2xl font-bold text-white">Plano Pro</h4>
+            <div class="flex items-baseline gap-1">
+              <span class="text-4xl font-extrabold text-white">R$ 149</span>
+              <span class="text-xs text-slate-400">/ mês</span>
+            </div>
+            <p class="text-slate-400 text-xs">Para clínicas com várias salas e profissionais simultâneos.</p>
+            <ul class="space-y-2.5 text-xs text-slate-300 pt-4 border-t border-slate-800">
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> <strong>Tudo do Plano Essencial</strong></li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Múltiplos logins para recepcionistas e aplicadoras</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Suporte prioritário VIP com atendimento em até 1 hora</li>
+              <li class="flex items-center gap-2"><i class="fa-solid fa-check text-rose-500"></i> Treinamento online para sua equipe</li>
+            </ul>
+          </div>
+          <a href="/criar-conta" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm text-center block transition border border-slate-700">
+            Assinar Plano Pro
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ / Dúvidas Frequentes -->
+  <section id="duvidas" class="py-20 bg-slate-900 border-t border-slate-800">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div class="text-center space-y-3">
+        <h2 class="text-xs font-bold text-rose-400 uppercase tracking-widest">Tire Suas Dúvidas</h2>
+        <h3 class="text-3xl font-extrabold text-white">Perguntas Frequentes</h3>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-2">
+          <h4 class="font-bold text-white text-base">Preciso instalar algum programa no meu computador?</h4>
+          <p class="text-slate-400">
+            Não! O Laser Clinic é 100% online na nuvem. Você pode acessar do seu celular, tablet, notebook ou computador da recepção sem instalar nada.
+          </p>
+        </div>
+
+        <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-2">
+          <h4 class="font-bold text-white text-base">Como funciona a assinatura digital da ficha de anamnese?</h4>
+          <p class="text-slate-400">
+            O cliente abre o link da ficha no celular ou no tablet da clínica e assina diretamente na tela usando a ponta do dedo. O sistema registra a data, hora e salva o arquivo assinado com conformidade com as regras da LGPD e conselhos de estética.
+          </p>
+        </div>
+
+        <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-2">
+          <h4 class="font-bold text-white text-base">Posso cadastrar meus próprios procedimentos e preços?</h4>
+          <p class="text-slate-400">
+            Sim! Ao criar sua clínica, você já recebe uma lista padrão com 10 procedimentos de laser pré-cadastrados, mas pode editar todos os valores, durações, nomes e adicionar novos serviços e pacotes como quiser.
+          </p>
+        </div>
+
+        <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 space-y-2">
+          <h4 class="font-bold text-white text-base">Preciso colocar cartão de crédito para fazer o teste grátis?</h4>
+          <p class="text-slate-400">
+            Não! Você só precisa do nome da sua clínica, seu email e WhatsApp. O acesso é liberado instantaneamente por 15 dias sem nenhum compromisso.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Final -->
+  <section class="py-20 bg-gradient-to-br from-rose-950 via-slate-900 to-slate-950 border-t border-slate-800 text-center px-4">
+    <div class="max-w-4xl mx-auto space-y-6">
+      <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+        Pronta para modernizar a gestão da sua clínica?
+      </h2>
+      <p class="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto">
+        Junte-se a clínicas de estética e laser que economizam horas todos os dias e aumentaram o faturamento com agendamento online.
+      </p>
+      <div class="pt-2">
+        <a href="/criar-conta" class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-extrabold text-lg shadow-xl shadow-rose-500/30 transition">
+          <i class="fa-solid fa-sparkles"></i>
+          <span>Criar Minha Conta Grátis por 15 Dias</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rodapé -->
+  <footer class="bg-slate-950 border-t border-slate-800 py-10 px-4 text-xs text-slate-500 text-center space-y-3">
+    <div class="flex items-center justify-center gap-6 font-semibold text-slate-400">
+      <a href="/criar-conta" class="hover:text-white">Cadastre sua Clínica</a>
+      <a href="/admin" class="hover:text-white">Painel da Clínica</a>
+      <a href="/c/laserglow/agendar" target="_blank" class="hover:text-white">Exemplo de Agendamento</a>
+    </div>
+    <p>&copy; 2026 Laser Clinic SaaS. Desenvolvido para Clínicas de Estética & Depilação a Laser.</p>
+  </footer>
+
+</body>
+</html>

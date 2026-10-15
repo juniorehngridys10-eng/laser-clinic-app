@@ -90,52 +90,112 @@
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col">
 
-  <!-- TELA DE BLOQUEIO / LOGIN COM PIN -->
+  <!-- TELA DE LOGIN / ACESSO DO PAINEL SAAS -->
   <div id="login-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-8 shadow-2xl border border-slate-100 text-center space-y-5">
-      <div class="w-16 h-16 rounded-2xl bg-rose-500 text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-rose-200">
-        <i class="fa-solid fa-lock"></i>
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5">
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-rose-200">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Painel da Clínica</h2>
+        <p class="text-xs text-slate-500">Gestão completa de pacientes, agendamentos e faturamento.</p>
       </div>
-      <div>
-        <h2 class="text-xl font-bold text-slate-900">Acesso Restrito</h2>
-        <p class="text-xs text-slate-500 mt-1">Digite o PIN da clínica para acessar a gestão, clientes e financeiro.</p>
+
+      <!-- Abas de Login (Email / PIN) -->
+      <div class="flex bg-slate-100 p-1 rounded-2xl text-xs font-semibold">
+        <button type="button" id="tab-login-email" onclick="switchLoginMode('email')" class="flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm transition">
+          <i class="fa-solid fa-envelope mr-1.5 text-rose-500"></i> Email & Senha
+        </button>
+        <button type="button" id="tab-login-pin" onclick="switchLoginMode('pin')" class="flex-1 py-2 rounded-xl text-slate-500 hover:text-slate-800 transition">
+          <i class="fa-solid fa-key mr-1.5 text-slate-400"></i> PIN Rápido (1234)
+        </button>
       </div>
 
       <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <input type="password" id="admin-pin-input" maxlength="8" required placeholder="PIN (Padrão: 1234)" autofocus class="w-full text-center tracking-widest text-xl font-bold px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50">
-          <p id="login-error" class="text-xs text-rose-500 font-medium mt-1.5 hidden">Senha PIN incorreta. Tente novamente.</p>
+        <!-- Campos Email / Senha -->
+        <div id="login-fields-email" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Email Cadastrado:</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-envelope text-sm"></i></span>
+              <input type="email" id="login-email-input" placeholder="admin@suaclinica.com" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Senha:</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-lock text-sm"></i></span>
+              <input type="password" id="login-password-input" placeholder="••••••••" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50">
+            </div>
+          </div>
         </div>
 
-        <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold shadow-md shadow-pink-200 transition">
-          Entrar no Painel
+        <!-- Campo PIN Legado -->
+        <div id="login-fields-pin" class="hidden space-y-2">
+          <label class="block text-xs font-semibold text-slate-700 text-center">Digite o PIN da clínica:</label>
+          <input type="password" id="admin-pin-input" maxlength="8" placeholder="1234" class="w-full text-center tracking-widest text-2xl font-bold px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50">
+          <p class="text-[11px] text-center text-slate-400">PIN padrão da clínica inicial: <strong>1234</strong></p>
+        </div>
+
+        <p id="login-error" class="text-xs text-rose-500 font-medium text-center hidden"></p>
+
+        <button type="submit" id="btn-login-submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold shadow-md shadow-pink-200 transition text-sm">
+          Acessar Painel
         </button>
       </form>
-      <div class="text-[11px] text-slate-400">PIN padrão inicial: <strong>1234</strong></div>
+
+      <!-- CTA de Nova Clínica (SaaS) -->
+      <div class="pt-3 border-t border-slate-100 text-center space-y-2">
+        <p class="text-xs text-slate-500">Quer usar este sistema na sua própria clínica?</p>
+        <a href="/criar-conta" class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3.5 py-2 rounded-xl transition border border-rose-200">
+          <i class="fa-solid fa-sparkles"></i> Criar Conta Grátis por 15 Dias
+        </a>
+      </div>
     </div>
   </div>
 
   <!-- Top Navigation -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
         <div id="admin-logo-wrapper" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-pink-200 overflow-hidden flex-shrink-0">
           <i id="admin-logo-icon" class="fa-solid fa-wand-magic-sparkles text-lg"></i>
           <img id="admin-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
         </div>
-        <div>
-          <span id="admin-display-name" class="font-bold text-lg text-slate-900 tracking-tight">LaserGlow Clinic</span>
-          <span class="text-xs bg-rose-100 text-rose-700 font-semibold px-2 py-0.5 rounded-full ml-2">Painel de Gestão</span>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span id="admin-display-name" class="font-bold text-base sm:text-lg text-slate-900 tracking-tight truncate">LaserGlow Clinic</span>
+            <span id="trial-badge" class="hidden text-[11px] bg-amber-50 text-amber-700 border border-amber-200 font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+              <i class="fa-solid fa-crown text-amber-500 mr-1"></i><span id="trial-badge-text">15 dias teste</span>
+            </span>
+          </div>
+          <p id="admin-user-info" class="text-[11px] text-slate-400 truncate hidden"></p>
         </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <button onclick="logoutAdmin()" class="text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition">
-          <i class="fa-solid fa-right-from-bracket mr-1"></i> Sair
-        </button>
-        <a href="/agendar" target="_blank" class="text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3.5 py-2 rounded-xl border border-rose-200 transition flex items-center gap-1.5 shadow-sm">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir Link do Cliente
+      <!-- Link Público Compartilhável & Ações -->
+      <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <!-- Pill com Link do Paciente -->
+        <div id="clinic-link-box" class="hidden md:flex items-center gap-1.5 bg-rose-50 border border-rose-200/80 px-2.5 py-1.5 rounded-xl text-xs">
+          <span class="text-rose-700 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-link text-[10px]"></i> Link Paciente:
+          </span>
+          <span id="clinic-slug-url" class="font-mono text-slate-700 font-medium select-all">/agendar</span>
+          <button type="button" onclick="copyClinicBookingLink()" title="Copiar Link de Agendamento" class="text-rose-600 hover:text-rose-800 p-1 hover:bg-rose-100 rounded transition">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          <button type="button" onclick="shareClinicBookingWhatsApp()" title="Enviar Link no WhatsApp" class="text-emerald-600 hover:text-emerald-700 p-1 hover:bg-emerald-50 rounded transition">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+          </button>
+        </div>
+
+        <a id="btn-open-client-link" href="/agendar" target="_blank" class="text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-rose-200 transition flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="hidden sm:inline">Abrir Link do Cliente</span><span class="sm:hidden">Agendar</span>
         </a>
+
+        <button onclick="logoutAdmin()" title="Sair do Sistema" class="text-xs font-semibold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-slate-200 p-2 sm:px-3 sm:py-1.5 rounded-xl transition flex items-center gap-1">
+          <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Sair</span>
+        </button>
       </div>
     </div>
   </header>
@@ -1436,13 +1496,38 @@
   </div>
 
   <script>
-    let adminToken = localStorage.getItem('laser_admin_pin');
+    let adminToken = localStorage.getItem('laser_admin_token') || localStorage.getItem('laser_admin_pin');
+    let currentLoginMode = 'email';
+    let currentClinic = null;
+    let currentUser = null;
     let appointmentsList = [];
     let clientsList = [];
     let servicesList = [];
     let clientPackagesList = [];
     let currentModalData = null;
     let selectedRescheduleTime = null;
+
+    function switchLoginMode(mode) {
+      currentLoginMode = mode;
+      const tabEmail = document.getElementById('tab-login-email');
+      const tabPin = document.getElementById('tab-login-pin');
+      const fieldsEmail = document.getElementById('login-fields-email');
+      const fieldsPin = document.getElementById('login-fields-pin');
+      const errEl = document.getElementById('login-error');
+      if (errEl) errEl.classList.add('hidden');
+
+      if (mode === 'email') {
+        tabEmail.className = "flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm transition";
+        tabPin.className = "flex-1 py-2 rounded-xl text-slate-500 hover:text-slate-800 transition";
+        fieldsEmail.classList.remove('hidden');
+        fieldsPin.classList.add('hidden');
+      } else {
+        tabPin.className = "flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm transition";
+        tabEmail.className = "flex-1 py-2 rounded-xl text-slate-500 hover:text-slate-800 transition";
+        fieldsPin.classList.remove('hidden');
+        fieldsEmail.classList.add('hidden');
+      }
+    }
 
     window.onload = () => {
       if (adminToken) {
@@ -1455,41 +1540,159 @@
 
     async function handleLogin(e) {
       e.preventDefault();
-      const pin = document.getElementById('admin-pin-input').value.trim();
       const errEl = document.getElementById('login-error');
-      try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin })
-        });
-        if (!res.ok) {
+      errEl.classList.add('hidden');
+      const btnSubmit = document.getElementById('btn-login-submit');
+      const originalText = btnSubmit.innerHTML;
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Entrando...';
+
+      let payload = {};
+      if (currentLoginMode === 'email') {
+        const email = document.getElementById('login-email-input').value.trim();
+        const password = document.getElementById('login-password-input').value;
+        if (!email || !password) {
+          errEl.textContent = "Por favor, informe seu email e senha.";
           errEl.classList.remove('hidden');
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = originalText;
           return;
         }
+        payload = { email, password };
+      } else {
+        const pin = document.getElementById('admin-pin-input').value.trim();
+        if (!pin) {
+          errEl.textContent = "Por favor, digite o PIN.";
+          errEl.classList.remove('hidden');
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = originalText;
+          return;
+        }
+        payload = { pin };
+      }
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          errEl.textContent = errData.detail || "Credenciais inválidas. Verifique os dados.";
+          errEl.classList.remove('hidden');
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = originalText;
+          return;
+        }
+
         const data = await res.json();
         adminToken = data.token;
+        localStorage.setItem('laser_admin_token', adminToken);
         localStorage.setItem('laser_admin_pin', adminToken);
+
         document.getElementById('login-screen').classList.add('hidden');
         initDashboard();
       } catch (err) {
-        alert("Erro ao conectar com o servidor.");
+        errEl.textContent = "Erro ao conectar com o servidor. Verifique sua conexão.";
+        errEl.classList.remove('hidden');
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalText;
       }
     }
 
     function logoutAdmin() {
+      localStorage.removeItem('laser_admin_token');
       localStorage.removeItem('laser_admin_pin');
       window.location.reload();
     }
 
     function getAdminHeaders() {
+      const token = localStorage.getItem('laser_admin_token') || localStorage.getItem('laser_admin_pin') || adminToken || '';
       return {
         'Content-Type': 'application/json',
-        'x-admin-pin': adminToken || ''
+        'Authorization': `Bearer ${token}`,
+        'x-admin-pin': token
       };
     }
 
-    function initDashboard() {
+    async function loadCurrentUserAndClinic() {
+      try {
+        const res = await fetch('/api/admin/me', { headers: getAdminHeaders() });
+        if (res.status === 401) {
+          logoutAdmin();
+          return;
+        }
+        const data = await res.json();
+        currentUser = data.user;
+        currentClinic = data.clinic;
+
+        if (currentClinic) {
+          document.getElementById('admin-display-name').textContent = currentClinic.name;
+          const slug = currentClinic.slug || 'laserglow';
+          const clientLink = `/c/${slug}/agendar`;
+          document.getElementById('btn-open-client-link').href = clientLink;
+          document.getElementById('clinic-slug-url').textContent = clientLink;
+          document.getElementById('clinic-link-box').classList.remove('hidden');
+
+          // Logo da clínica
+          if (currentClinic.logo_url) {
+            updateLogoPreviews(currentClinic.logo_url);
+          }
+
+          // Badge de teste ou plano
+          const badgeEl = document.getElementById('trial-badge');
+          const badgeText = document.getElementById('trial-badge-text');
+          if (badgeEl && badgeText) {
+            badgeEl.classList.remove('hidden');
+            if (currentClinic.plan === 'trial') {
+              const days = currentClinic.days_left !== undefined ? currentClinic.days_left : 15;
+              badgeText.textContent = `${days} dias grátis`;
+            } else {
+              badgeText.textContent = `Plano ${currentClinic.plan.toUpperCase()}`;
+              badgeEl.className = "text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold px-2 py-0.5 rounded-full whitespace-nowrap";
+            }
+          }
+        }
+
+        if (currentUser) {
+          const userEl = document.getElementById('admin-user-info');
+          if (userEl) {
+            userEl.textContent = `${currentUser.name} (${currentUser.email})`;
+            userEl.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao carregar dados do usuário e clínica:", err);
+      }
+    }
+
+    function copyClinicBookingLink() {
+      const slug = currentClinic?.slug || 'laserglow';
+      const fullUrl = `${window.location.origin}/c/${slug}/agendar`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          alert(`✅ Link de agendamento copiado:\n${fullUrl}\n\nEnvie este link para suas clientes agendarem diretamente!`);
+        }).catch(() => {
+          prompt("Copie o link de agendamento:", fullUrl);
+        });
+      } else {
+        prompt("Copie o link de agendamento:", fullUrl);
+      }
+    }
+
+    function shareClinicBookingWhatsApp() {
+      const slug = currentClinic?.slug || 'laserglow';
+      const clinicName = currentClinic?.name || 'nossa clínica';
+      const fullUrl = `${window.location.origin}/c/${slug}/agendar`;
+      const msg = encodeURIComponent(`Olá! Faça seu agendamento na ${clinicName} pelo nosso link online 24h:\n${fullUrl}`);
+      window.open(`https://wa.me/?text=${msg}`, '_blank');
+    }
+
+    async function initDashboard() {
+      await loadCurrentUserAndClinic();
       loadAppointments();
       loadClients();
       loadServices();
@@ -2511,7 +2714,10 @@
 
     async function loadClinicSettings() {
       try {
-        const res = await fetch('/api/settings');
+        let res = await fetch('/api/admin/settings', { headers: getAdminHeaders() });
+        if (!res.ok) {
+          res = await fetch('/api/settings');
+        }
         const settings = await res.json();
         if (settings.name) {
           document.getElementById('admin-display-name').textContent = settings.name;

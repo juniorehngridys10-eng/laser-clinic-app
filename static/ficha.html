@@ -523,9 +523,18 @@
       }
     }
 
+    function getClinicSlug() {
+      const match = window.location.pathname.match(/\/c\/([a-zA-Z0-9_-]+)/);
+      if (match) return match[1];
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('c') || urlParams.get('clinic') || null;
+    }
+
     async function loadClinicSettings() {
       try {
-        const res = await fetch('/api/settings');
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/settings` : '/api/settings';
+        const res = await fetch(url);
         const data = await res.json();
         if (data.name) {
           document.getElementById('clinic-display-name').textContent = data.name;
@@ -577,7 +586,9 @@
 
     async function fetchExistingFicha(phone) {
       try {
-        const res = await fetch(`/api/client/ficha?phone=${phone}`);
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/ficha?phone=${phone}` : `/api/client/ficha?phone=${phone}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (data.client) {
           const c = data.client;
@@ -673,7 +684,9 @@
       };
 
       try {
-        const res = await fetch('/api/client/ficha', {
+        const slug = getClinicSlug();
+        const url = slug ? `/api/public/${slug}/ficha` : '/api/client/ficha';
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
