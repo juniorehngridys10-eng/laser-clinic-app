@@ -203,6 +203,31 @@
   <!-- Main Content Layout -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
+    <!-- BANNER DE AVISO DE ASSINATURA PENDENTE / BLOQUEADA (Para Clínicas Clientes) -->
+    <div id="saas-subscription-alert-box" class="hidden p-5 rounded-2xl border border-rose-200 bg-rose-50/95 text-rose-800 space-y-3 shadow-md">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center text-lg flex-shrink-0 shadow-md">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <div class="space-y-1.5 flex-1">
+          <h4 id="saas-alert-title" class="font-extrabold text-sm sm:text-base text-rose-900">Assinatura Pendente de Renovação</h4>
+          <p id="saas-alert-message" class="text-xs text-rose-700 leading-relaxed">
+            Seu período de teste ou mensalidade encerrou. Para manter os agendamentos online e fichas das suas pacientes sem interrupções, realize o pagamento via PIX:
+          </p>
+          <div class="p-3 bg-white rounded-xl border border-rose-200 text-xs space-y-1 mt-2">
+            <div><strong>Chave PIX:</strong> <code id="saas-alert-pix-key" class="font-mono bg-rose-50 px-1 py-0.5 rounded text-rose-700 font-bold select-all">--</code></div>
+            <div><strong>Titular:</strong> <span id="saas-alert-pix-name">--</span></div>
+            <div><strong>Valor da Mensalidade:</strong> <span id="saas-alert-price" class="font-bold text-emerald-600">R$ 79,00</span></div>
+          </div>
+          <div class="pt-2">
+            <a id="saas-alert-whatsapp-btn" href="#" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition">
+              <i class="fa-brands fa-whatsapp text-sm"></i> Enviar Comprovante no WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- KPI Cards de Alta Inteligência da Clínica -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
       <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -276,6 +301,9 @@
       </button>
       <button id="tab-btn-settings" onclick="switchTab('settings')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
         <i class="fa-solid fa-clock text-rose-500"></i> Horários & Configurações
+      </button>
+      <button id="tab-btn-saas" onclick="switchTab('saas')" class="hidden px-4 py-3 font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-t-xl text-sm flex items-center gap-2 whitespace-nowrap border-t border-x border-amber-200">
+        <i class="fa-solid fa-crown text-amber-500"></i> Gestão de Clínicas (SaaS)
       </button>
     </div>
 
@@ -947,7 +975,210 @@
       </div>
     </section>
 
+    <!-- SEÇÃO 9: GESTÃO MASTER DE CLÍNICAS E ASSINATURAS (SUPERADMIN SAAS) -->
+    <section id="section-saas" class="space-y-6 hidden">
+      
+      <!-- Cabeçalho SuperAdmin -->
+      <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 sm:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-slate-700">
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+            <i class="fa-solid fa-crown text-amber-400"></i> Painel Master SuperAdmin
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Gestão de Assinaturas das Clínicas</h2>
+          <p class="text-slate-300 text-xs sm:text-sm max-w-2xl">
+            Monitore todas as clínicas cadastradas, gerencie os testes grátis de 15 dias, renove mensalidades via PIX, bloqueie inadimplentes e cobre pelo WhatsApp com 1 clique.
+          </p>
+        </div>
+
+        <button onclick="openSaasConfigModal()" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs sm:text-sm shadow-lg shadow-amber-500/30 transition flex items-center gap-2 self-start md:self-auto cursor-pointer">
+          <i class="fa-solid fa-qrcode text-base"></i> Minha Chave PIX & Cobrança
+        </button>
+      </div>
+
+      <!-- KPI Cards do SaaS -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-clinic-medical text-rose-500"></i> Total de Clínicas
+          </p>
+          <h3 id="saas-stat-total" class="text-xl sm:text-2xl font-extrabold text-slate-800 mt-1">--</h3>
+          <span class="text-[10px] text-slate-400">Cadastradas</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-circle-check text-emerald-500"></i> Pagantes (Ativas)
+          </p>
+          <h3 id="saas-stat-active" class="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-1">--</h3>
+          <span class="text-[10px] text-emerald-600 font-semibold">Mensalidade em dia</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-hourglass-half text-amber-500"></i> Em Degustação
+          </p>
+          <h3 id="saas-stat-trial" class="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1">--</h3>
+          <span class="text-[10px] text-slate-400">15 dias grátis</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-ban text-rose-500"></i> Vencidas / Bloqueadas
+          </p>
+          <h3 id="saas-stat-expired" class="text-xl sm:text-2xl font-extrabold text-rose-600 mt-1">--</h3>
+          <span class="text-[10px] text-rose-500 font-semibold">Cobrança pendente</span>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
+          <p class="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+            <i class="fa-solid fa-sack-dollar text-indigo-500"></i> Faturamento Mensal (MRR)
+          </p>
+          <h3 id="saas-stat-mrr" class="text-xl sm:text-2xl font-extrabold text-indigo-600 mt-1">R$ --</h3>
+          <span class="text-[10px] text-slate-400">Receita recorrente</span>
+        </div>
+      </div>
+
+      <!-- Barra de Filtros e Busca de Clínicas -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex flex-1 items-center gap-2 max-w-md">
+          <span class="text-slate-400 pl-1"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
+          <input type="text" id="saas-search-input" oninput="filterSaasClinicsTable()" placeholder="Buscar por nome da clínica, responsável ou WhatsApp..." class="w-full text-xs sm:text-sm px-3 py-2 border border-slate-200 rounded-xl focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+          <button type="button" onclick="filterSaasStatus('all')" id="saas-flt-all" class="px-3 py-1.5 rounded-xl bg-slate-800 text-white">Todas</button>
+          <button type="button" onclick="filterSaasStatus('active')" id="saas-flt-active" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">🟢 Pagantes</button>
+          <button type="button" onclick="filterSaasStatus('trial')" id="saas-flt-trial" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">🟡 Em Teste</button>
+          <button type="button" onclick="filterSaasStatus('expired')" id="saas-flt-expired" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">🔴 Vencidas</button>
+          <button type="button" onclick="filterSaasStatus('blocked')" id="saas-flt-blocked" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200">⚫ Bloqueadas</button>
+        </div>
+      </div>
+
+      <!-- Tabela de Clínicas Cadastradas -->
+      <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[11px] font-bold">
+              <tr>
+                <th class="py-3.5 px-4">Clínica & Link</th>
+                <th class="py-3.5 px-4">Dona / Responsável</th>
+                <th class="py-3.5 px-4">Plano & Valor</th>
+                <th class="py-3.5 px-4">Status & Prazo</th>
+                <th class="py-3.5 px-4 text-center">Ações Rápidas</th>
+              </tr>
+            </thead>
+            <tbody id="saas-clinics-tbody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+              <tr>
+                <td colspan="5" class="py-8 text-center text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando clínicas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
   </main>
+
+  <!-- MODAL: CONFIGURAÇÃO DE RECEBIMENTO DO SUPERADMIN (CHAVE PIX E WHATSAPP) -->
+  <div id="modal-saas-config" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shadow-md shadow-amber-200">
+            <i class="fa-solid fa-qrcode"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900">Seus Dados de Cobrança PIX</h3>
+            <p class="text-xs text-slate-500">Dados exibidos para as clínicas pagarem</p>
+          </div>
+        </div>
+        <button onclick="closeSaasConfigModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-saas-config" onsubmit="saveSaasConfig(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Sua Chave PIX (CPF, Celular, Email ou Aleatória):</label>
+          <input type="text" id="cfg-pix-key" required placeholder="Ex: 11987654321 ou seu@email.com" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-amber-500 focus:outline-none bg-slate-50 font-mono">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome do Titular da Conta:</label>
+          <input type="text" id="cfg-pix-name" required placeholder="Ex: Junior Loiola" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-amber-500 focus:outline-none bg-slate-50">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Seu WhatsApp de Atendimento/Cobrança:</label>
+          <input type="text" id="cfg-whatsapp" required placeholder="Ex: 11987654321" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-amber-500 focus:outline-none bg-slate-50">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Valor Padrão da Mensalidade (R$):</label>
+          <input type="number" step="0.01" id="cfg-default-price" required placeholder="79.00" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl focus:ring-amber-500 focus:outline-none bg-slate-50">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeSaasConfigModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold">Cancelar</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold shadow-md shadow-amber-200 transition">Salvar Configuração</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: RENOVAÇÃO MANUAL DE MENSALIDADE DA CLÍNICA -->
+  <div id="modal-renew-clinic" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-base text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-money-check-dollar text-emerald-500"></i> Renovar Mensalidade
+        </h3>
+        <button onclick="closeRenewClinicModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-renew-clinic" onsubmit="submitRenewClinic(event)" class="space-y-3.5">
+        <input type="hidden" id="renew-clinic-id">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Clínica Selecionada:</label>
+          <input type="text" id="renew-clinic-name" readonly class="w-full px-3 py-2 text-xs border rounded-xl bg-slate-100 font-bold text-slate-800">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Período a Liberar:</label>
+          <select id="renew-days" class="w-full px-3 py-2 text-xs border rounded-xl bg-white font-semibold">
+            <option value="30">+30 Dias (1 Mês)</option>
+            <option value="60">+60 Dias (2 Meses)</option>
+            <option value="90">+90 Dias (3 Meses / Trimestral)</option>
+            <option value="180">+180 Dias (Semestral)</option>
+            <option value="365">+365 Dias (1 Ano)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Plano da Clínica:</label>
+          <select id="renew-plan" class="w-full px-3 py-2 text-xs border rounded-xl bg-white font-semibold">
+            <option value="essencial">Plano Essencial (R$ 79/mês)</option>
+            <option value="pro">Plano Pro Multi-Profissional (R$ 149/mês)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Valor Cobrado (R$):</label>
+          <input type="number" step="0.01" id="renew-price" value="79.00" class="w-full px-3 py-2 text-xs border rounded-xl bg-white">
+        </div>
+
+        <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeRenewClinicModal()" class="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-200 transition">Confirmar Renovação</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- MODAL: CADASTRAR / EDITAR CLIENTE -->
   <div id="modal-client" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -1663,6 +1894,41 @@
             userEl.textContent = `${currentUser.name} (${currentUser.email})`;
             userEl.classList.remove('hidden');
           }
+
+          // Se for SuperAdmin (Clínica 1 ou is_superadmin=1), ativa a aba SaaS Master
+          if (currentUser.is_superadmin === 1 || currentClinic.id === 1) {
+            const saasBtn = document.getElementById('tab-btn-saas');
+            if (saasBtn) saasBtn.classList.remove('hidden');
+          }
+        }
+
+        // Se for clínica cliente e estiver vencida ou bloqueada, exibe banner de cobrança com chave PIX
+        if (currentClinic && currentClinic.id !== 1 && (currentClinic.is_blocked || currentClinic.is_expired)) {
+          const alertBox = document.getElementById('saas-subscription-alert-box');
+          if (alertBox) alertBox.classList.remove('hidden');
+          
+          if (currentClinic.is_blocked) {
+            document.getElementById('saas-alert-title').textContent = "🔒 Acesso da Clínica Bloqueado";
+            document.getElementById('saas-alert-message').textContent = "O acesso aos atendimentos e cadastros da clínica foi suspenso por pendência na mensalidade. Para restabelecer o acesso imediatamente, faça o PIX abaixo e envie o comprovante:";
+          }
+
+          if (data.saas_payment_info) {
+            if (data.saas_payment_info.pix_key) {
+              document.getElementById('saas-alert-pix-key').textContent = data.saas_payment_info.pix_key;
+            }
+            if (data.saas_payment_info.pix_name) {
+              document.getElementById('saas-alert-pix-name').textContent = data.saas_payment_info.pix_name;
+            }
+            const price = (currentClinic.monthly_price || 79).toFixed(2).replace('.', ',');
+            document.getElementById('saas-alert-price').textContent = `R$ ${price}`;
+
+            if (data.saas_payment_info.whatsapp) {
+              let clean = data.saas_payment_info.whatsapp.replace(/\D/g, '');
+              if (!clean.startsWith('55') && clean.length <= 11 && clean.length >= 10) clean = '55' + clean;
+              const msg = encodeURIComponent(`Olá! Acabei de realizar o PIX de R$ ${price} para renovar a assinatura da clínica ${currentClinic.name}. Segue o comprovante.`);
+              document.getElementById('saas-alert-whatsapp-btn').href = `https://wa.me/${clean}?text=${msg}`;
+            }
+          }
         }
       } catch (err) {
         console.error("Erro ao carregar dados do usuário e clínica:", err);
@@ -1703,17 +1969,29 @@
     }
 
     function switchTab(tab) {
-      ['appointments', 'clients', 'packages-control', 'cashflow', 'analytics', 'reports', 'packages', 'settings'].forEach(t => {
+      ['appointments', 'clients', 'packages-control', 'cashflow', 'analytics', 'reports', 'packages', 'settings', 'saas'].forEach(t => {
         const sec = document.getElementById(`section-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (sec) sec.classList.add('hidden');
-        if (btn) btn.className = "px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap";
+        if (btn) {
+          if (t === 'saas') {
+            btn.className = "px-4 py-3 font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-t-xl text-sm flex items-center gap-2 whitespace-nowrap border-t border-x border-amber-200";
+          } else {
+            btn.className = "px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap";
+          }
+        }
       });
 
       const activeSec = document.getElementById(`section-${tab}`);
       const activeBtn = document.getElementById(`tab-btn-${tab}`);
       if (activeSec) activeSec.classList.remove('hidden');
-      if (activeBtn) activeBtn.className = "px-4 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap";
+      if (activeBtn) {
+        if (tab === 'saas') {
+          activeBtn.className = "px-4 py-3 font-bold text-amber-900 bg-amber-100 border-b-2 border-amber-500 rounded-t-xl text-sm flex items-center gap-2 whitespace-nowrap";
+        } else {
+          activeBtn.className = "px-4 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap";
+        }
+      }
 
       if (tab === 'packages' || tab === 'packages-control') { loadServices(); loadClientPackages(); }
       if (tab === 'clients') loadClients();
@@ -1721,6 +1999,309 @@
       if (tab === 'analytics') loadAnalytics();
       if (tab === 'reports') initReportsTab();
       if (tab === 'settings') loadClinicSettings();
+      if (tab === 'saas') { loadSaasClinics(); loadSaasConfig(); }
+    }
+
+    // --- GESTÃO MASTER SUPERADMIN (SAAS) ---
+    let allSaasClinics = [];
+    let currentSaasStatusFilter = 'all';
+    let saasGlobalConfig = { pix_key: '', pix_name: '', whatsapp: '', default_monthly_price: 79.0 };
+
+    async function loadSaasConfig() {
+      try {
+        const res = await fetch('/api/superadmin/config', { headers: getAdminHeaders() });
+        if (res.ok) {
+          saasGlobalConfig = await res.json();
+          document.getElementById('cfg-pix-key').value = saasGlobalConfig.pix_key || '';
+          document.getElementById('cfg-pix-name').value = saasGlobalConfig.pix_name || '';
+          document.getElementById('cfg-whatsapp').value = saasGlobalConfig.whatsapp || '';
+          document.getElementById('cfg-default-price').value = saasGlobalConfig.default_monthly_price || 79.0;
+        }
+      } catch (e) {
+        console.error("Erro ao carregar config SaaS:", e);
+      }
+    }
+
+    function openSaasConfigModal() {
+      loadSaasConfig();
+      document.getElementById('modal-saas-config').classList.remove('hidden');
+    }
+
+    function closeSaasConfigModal() {
+      document.getElementById('modal-saas-config').classList.add('hidden');
+    }
+
+    async function saveSaasConfig(e) {
+      e.preventDefault();
+      const payload = {
+        pix_key: document.getElementById('cfg-pix-key').value.trim(),
+        pix_name: document.getElementById('cfg-pix-name').value.trim(),
+        whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+        default_monthly_price: parseFloat(document.getElementById('cfg-default-price').value) || 79.0
+      };
+
+      try {
+        const res = await fetch('/api/superadmin/config', {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) { alert("Erro ao salvar configurações."); return; }
+        saasGlobalConfig = payload;
+        closeSaasConfigModal();
+        alert("✅ Configurações de recebimento PIX e WhatsApp salvas com sucesso!");
+      } catch (err) {
+        alert("Erro na conexão com o servidor.");
+      }
+    }
+
+    async function loadSaasClinics() {
+      const tbody = document.getElementById('saas-clinics-tbody');
+      tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando clínicas...</td></tr>`;
+
+      try {
+        const res = await fetch('/api/superadmin/clinics', { headers: getAdminHeaders() });
+        if (!res.ok) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-rose-500">Erro ao carregar clínicas ou acesso não autorizado.</td></tr>`;
+          return;
+        }
+
+        const data = await res.json();
+        const s = data.summary;
+
+        document.getElementById('saas-stat-total').textContent = s.total_clinics;
+        document.getElementById('saas-stat-active').textContent = s.active_clinics;
+        document.getElementById('saas-stat-trial').textContent = s.trial_clinics;
+        document.getElementById('saas-stat-expired').textContent = s.expired_clinics + s.blocked_clinics;
+        document.getElementById('saas-stat-mrr').textContent = `R$ ${s.estimated_mrr.toFixed(2).replace('.', ',')}`;
+
+        allSaasClinics = data.clinics || [];
+        renderSaasClinicsTable();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-rose-500">Falha ao carregar lista de clínicas.</td></tr>`;
+      }
+    }
+
+    function filterSaasStatus(st) {
+      currentSaasStatusFilter = st;
+      ['all', 'active', 'trial', 'expired', 'blocked'].forEach(id => {
+        const btn = document.getElementById(`saas-flt-${id}`);
+        if (btn) {
+          if (id === st) {
+            btn.className = "px-3 py-1.5 rounded-xl bg-slate-800 text-white font-bold";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-semibold";
+          }
+        }
+      });
+      renderSaasClinicsTable();
+    }
+
+    function filterSaasClinicsTable() {
+      renderSaasClinicsTable();
+    }
+
+    function renderSaasClinicsTable() {
+      const tbody = document.getElementById('saas-clinics-tbody');
+      const search = (document.getElementById('saas-search-input')?.value || '').toLowerCase().trim();
+
+      let list = allSaasClinics.filter(c => {
+        if (currentSaasStatusFilter !== 'all' && c.calculated_status !== currentSaasStatusFilter) {
+          return false;
+        }
+        if (search) {
+          const matchName = (c.name || '').toLowerCase().includes(search);
+          const matchOwner = (c.owner_name || '').toLowerCase().includes(search);
+          const matchPhone = (c.phone || '').includes(search);
+          const matchEmail = (c.owner_email || '').toLowerCase().includes(search);
+          if (!matchName && !matchOwner && !matchPhone && !matchEmail) return false;
+        }
+        return true;
+      });
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Nenhuma clínica encontrada com os filtros selecionados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(c => {
+        let badgeHtml = '';
+        if (c.calculated_status === 'active') {
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 w-fit"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativa (Pago)</span>`;
+        } else if (c.calculated_status === 'trial') {
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200 flex items-center gap-1 w-fit"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Teste: ${c.days_left >= 0 ? c.days_left + ' dias' : 'Expirando'}</span>`;
+        } else if (c.calculated_status === 'expired') {
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1 w-fit"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Vencida (${Math.abs(c.days_left)}d atrás)</span>`;
+        } else if (c.calculated_status === 'blocked') {
+          badgeHtml = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 text-white flex items-center gap-1 w-fit"><i class="fa-solid fa-ban text-[10px]"></i> Bloqueada</span>`;
+        }
+
+        const isMatriz = c.id === 1;
+        const ownerPhone = c.phone || '';
+        let cleanPhone = ownerPhone.replace(/\D/g, '');
+        if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11 && cleanPhone.length >= 10) cleanPhone = '55' + cleanPhone;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-900 flex items-center gap-2">
+                ${c.name}
+                ${isMatriz ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 font-extrabold px-1.5 py-0.5 rounded">Matriz</span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                <a href="/c/${c.slug}/agendar" target="_blank" class="text-rose-600 hover:underline font-mono">/c/${c.slug}/agendar</a>
+                <span>• ${c.appointments_count || 0} agend.</span>
+                <span>• ${c.clients_count || 0} clientes</span>
+              </div>
+            </td>
+
+            <td class="py-3.5 px-4">
+              <div class="font-semibold text-slate-800">${c.owner_name || 'Responsável'}</div>
+              <div class="text-[11px] text-slate-400">${c.owner_email || '--'}</div>
+              ${cleanPhone ? `
+                <a href="https://wa.me/${cleanPhone}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-bold hover:underline mt-0.5">
+                  <i class="fa-brands fa-whatsapp"></i> ${ownerPhone}
+                </a>
+              ` : ''}
+            </td>
+
+            <td class="py-3.5 px-4">
+              <div class="font-bold text-slate-800 uppercase text-xs">${c.plan || 'trial'}</div>
+              <div class="text-[11px] text-slate-500 font-semibold">R$ ${(c.monthly_price || 79).toFixed(2).replace('.', ',')}/mês</div>
+            </td>
+
+            <td class="py-3.5 px-4 space-y-1">
+              ${badgeHtml}
+              <div class="text-[11px] text-slate-400">
+                ${c.expiration_date_formatted ? `Venc.: ${c.expiration_date_formatted}` : 'Sem data definida'}
+              </div>
+            </td>
+
+            <td class="py-3.5 px-4">
+              ${isMatriz ? '<span class="text-xs text-slate-400 italic text-center block">Clínica Principal</span>' : `
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                  <button onclick="openRenewClinicModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.plan || 'essencial'}', ${c.monthly_price || 79})" title="Confirmar Pagamento e Renovar" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-money-bill-wave"></i> Renovar
+                  </button>
+
+                  <button onclick="sendSaasCobrarWhatsApp(${JSON.stringify(c).replace(/"/g, '&quot;')})" title="Enviar Cobrança no WhatsApp" class="px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-brands fa-whatsapp text-sm"></i> Cobrar
+                  </button>
+
+                  <button onclick="extendClinicTrial(${c.id})" title="+7 Dias de Teste" class="px-2 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 text-xs font-semibold transition cursor-pointer">
+                    +7d Teste
+                  </button>
+
+                  ${c.is_blocked ? `
+                    <button onclick="toggleBlockClinic(${c.id}, 1)" title="Desbloquear Clínica" class="px-2 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold transition cursor-pointer">
+                      <i class="fa-solid fa-unlock"></i>
+                    </button>
+                  ` : `
+                    <button onclick="toggleBlockClinic(${c.id}, 0)" title="Bloquear Acesso" class="px-2 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold transition cursor-pointer">
+                      <i class="fa-solid fa-ban"></i>
+                    </button>
+                  `}
+                </div>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openRenewClinicModal(id, name, plan, price) {
+      document.getElementById('renew-clinic-id').value = id;
+      document.getElementById('renew-clinic-name').value = name;
+      document.getElementById('renew-plan').value = plan === 'pro' ? 'pro' : 'essencial';
+      document.getElementById('renew-price').value = price || 79.0;
+      document.getElementById('modal-renew-clinic').classList.remove('hidden');
+    }
+
+    function closeRenewClinicModal() {
+      document.getElementById('modal-renew-clinic').classList.add('hidden');
+    }
+
+    async function submitRenewClinic(e) {
+      e.preventDefault();
+      const clinicId = document.getElementById('renew-clinic-id').value;
+      const days = parseInt(document.getElementById('renew-days').value) || 30;
+      const plan = document.getElementById('renew-plan').value;
+      const monthly_price = parseFloat(document.getElementById('renew-price').value) || 79.0;
+
+      try {
+        const res = await fetch(`/api/superadmin/clinics/${clinicId}/renew`, {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify({ days, plan, monthly_price })
+        });
+
+        if (!res.ok) { alert("Erro ao renovar assinatura."); return; }
+        const data = await res.json();
+        alert(data.message || "Assinatura renovada com sucesso!");
+        closeRenewClinicModal();
+        loadSaasClinics();
+      } catch (err) {
+        alert("Erro na conexão com o servidor.");
+      }
+    }
+
+    async function toggleBlockClinic(id, isBlocked) {
+      const action = isBlocked ? "desbloquear" : "bloquear";
+      if (!confirm(`Tem certeza que deseja ${action} o acesso desta clínica?`)) return;
+
+      const endpoint = isBlocked ? `/api/superadmin/clinics/${id}/unblock` : `/api/superadmin/clinics/${id}/block`;
+      try {
+        const res = await fetch(endpoint, { method: 'POST', headers: getAdminHeaders() });
+        if (!res.ok) { alert(`Erro ao ${action} clínica.`); return; }
+        loadSaasClinics();
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    async function extendClinicTrial(id) {
+      if (!confirm("Deseja conceder mais 7 dias de teste grátis para esta clínica?")) return;
+      try {
+        const res = await fetch(`/api/superadmin/clinics/${id}/extend-trial`, {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify({ days: 7 })
+        });
+        if (!res.ok) { alert("Erro ao estender teste."); return; }
+        const data = await res.json();
+        alert(data.message);
+        loadSaasClinics();
+      } catch (err) {
+        alert("Erro na conexão.");
+      }
+    }
+
+    function sendSaasCobrarWhatsApp(clinic) {
+      const phone = clinic.phone || '';
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11 && cleanPhone.length >= 10) cleanPhone = '55' + cleanPhone;
+
+      if (!cleanPhone) {
+        alert("Esta clínica não possui número de WhatsApp cadastrado.");
+        return;
+      }
+
+      const pixKey = saasGlobalConfig.pix_key || 'A definir nas configurações';
+      const pixName = saasGlobalConfig.pix_name || 'Administrador';
+      const price = (clinic.monthly_price || 79).toFixed(2).replace('.', ',');
+
+      const msg = encodeURIComponent(
+        `Olá, ${clinic.owner_name || 'tudo bem'}!\n\n` +
+        `Aqui é do suporte da plataforma da clínica *${clinic.name}*.\n\n` +
+        `Passando para avisar que a mensalidade do sistema de agendamento online e fichas digitais venceu.\n\n` +
+        `💰 *Valor da Renovação:* R$ ${price}\n` +
+        `🔑 *Chave PIX:* ${pixKey}\n` +
+        `👤 *Titular:* ${pixName}\n\n` +
+        `Assim que realizar o PIX, basta enviar o comprovante por aqui para mantermos o link das suas clientes ativo!\n\n` +
+        `Qualquer dúvida, estamos à disposição. 😊`
+      );
+
+      window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
     }
 
     // 1. ATENDIMENTOS
