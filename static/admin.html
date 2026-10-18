@@ -134,8 +134,8 @@
 
       <!-- Atalhos e Links -->
       <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-        <button type="button" onclick="fillAdminCredentials()" class="text-[11px] text-slate-400 hover:text-rose-600 transition flex items-center gap-1 hover:underline cursor-pointer" title="Preencher usuário e senha padrão">
-          <i class="fa-solid fa-key text-[10px]"></i> Preencher admin matriz
+        <button type="button" onclick="openForgotPasswordModal()" class="text-[11px] text-slate-500 hover:text-rose-600 transition flex items-center gap-1 hover:underline cursor-pointer">
+          <i class="fa-solid fa-lock-open text-[10px]"></i> Esqueci minha senha
         </button>
         <a href="/criar-conta" class="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline">
           Criar Novo Estabelecimento
@@ -1170,6 +1170,149 @@
     </div>
   </div>
 
+  <!-- MODAL: RECUPERAÇÃO DE SENHA (ESQUECI MINHA SENHA) -->
+  <div id="modal-forgot-password" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5 animate-scale">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center text-lg shadow-md shadow-rose-200">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900">Recuperar Senha</h3>
+            <p class="text-xs text-slate-400">Receba o código no seu e-mail cadastrado</p>
+          </div>
+        </div>
+        <button onclick="closeForgotPasswordModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Etapa 1: Solicitar Código por Email -->
+      <form id="form-forgot-step1" onsubmit="submitForgotPassword(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail Cadastrado:</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-regular fa-envelope text-sm"></i></span>
+            <input type="email" id="forgot-email-input" required placeholder="seu@email.com" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-xs sm:text-sm bg-slate-50 font-medium">
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1">Enviaremos um código de 6 dígitos para o e-mail informado.</p>
+        </div>
+
+        <p id="forgot-error" class="text-xs text-rose-500 font-medium text-center hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200"></p>
+
+        <button type="submit" id="btn-forgot-send" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-pink-200 transition flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-paper-plane"></i> Enviar Código de Recuperação
+        </button>
+      </form>
+
+      <!-- Etapa 2: Inserir Código e Nova Senha -->
+      <form id="form-forgot-step2" onsubmit="submitResetPassword(event)" class="space-y-4 hidden">
+        <div id="forgot-code-alert" class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-start gap-2">
+          <i class="fa-solid fa-circle-check text-emerald-600 text-sm mt-0.5"></i>
+          <div>
+            <span class="font-bold">Código gerado!</span>
+            <p id="forgot-code-detail" class="text-[11px] text-emerald-700 mt-0.5">Verifique sua caixa de entrada.</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Código de 6 Dígitos:</label>
+          <input type="text" id="reset-token-input" maxlength="6" required placeholder="Ex: 123456" class="w-full px-4 py-2.5 text-center text-lg tracking-widest font-mono font-bold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Nova Senha de Acesso:</label>
+          <input type="password" id="reset-password-input" minlength="4" required placeholder="Digite sua nova senha" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-xs sm:text-sm bg-slate-50 font-medium">
+          <p class="text-[11px] text-slate-400 mt-1">Mínimo de 4 caracteres.</p>
+        </div>
+
+        <p id="reset-error" class="text-xs text-rose-500 font-medium text-center hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200"></p>
+
+        <button type="submit" id="btn-reset-submit" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-200 transition flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-check"></i> Redefinir Senha e Entrar
+        </button>
+
+        <button type="button" onclick="backToStep1Forgot()" class="w-full text-center text-xs text-slate-500 hover:text-slate-800 hover:underline">
+          Voltar e reenviar código
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: GESTÃO E VISUALIZAÇÃO DE SENHA DO CLIENTE (SUPERADMIN) -->
+  <div id="modal-saas-password" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5 animate-scale">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center text-lg shadow-md shadow-amber-200">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900">Credenciais do Cliente</h3>
+            <p class="text-xs text-slate-400">Ver e gerenciar acesso da clínica</p>
+          </div>
+        </div>
+        <button onclick="closeClinicPasswordModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Informações do Estabelecimento -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-1.5 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Estabelecimento:</span>
+          <span id="saas-pwd-clinic-name" class="font-bold text-slate-900 truncate max-w-[200px]">--</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">Responsável:</span>
+          <span id="saas-pwd-owner-name" class="font-semibold text-slate-800 truncate max-w-[200px]">--</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 font-medium">E-mail de Login:</span>
+          <span id="saas-pwd-owner-email" class="font-mono text-slate-700 truncate max-w-[200px]">--</span>
+        </div>
+      </div>
+
+      <!-- Visualização da Senha Atual -->
+      <div class="space-y-1.5">
+        <label class="block text-xs font-bold text-slate-700">Senha Cadastrada do Cliente:</label>
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <input type="password" id="saas-pwd-display" readonly class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-100 font-mono text-sm font-bold text-slate-800 pr-10 select-all">
+            <button type="button" onclick="toggleSuperadminViewPassword()" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-800 cursor-pointer" title="Ver / Ocultar Senha">
+              <i id="saas-pwd-toggle-icon" class="fa-regular fa-eye text-sm"></i>
+            </button>
+          </div>
+          <button type="button" onclick="copyClinicPassword()" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="Copiar Senha">
+            <i class="fa-regular fa-copy"></i> Copiar
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-400">Você pode ver a senha para prestar suporte ao cliente quando ele solicitar.</p>
+      </div>
+
+      <!-- Formulário para Redefinir Senha -->
+      <form id="form-saas-change-pwd" onsubmit="submitSuperadminChangePassword(event)" class="space-y-3 pt-2 border-t border-slate-100">
+        <input type="hidden" id="saas-pwd-clinic-id">
+        <label class="block text-xs font-bold text-slate-700">Alterar / Redefinir Senha Agora:</label>
+        <div class="flex items-center gap-2">
+          <input type="text" id="saas-pwd-new-input" required minlength="4" placeholder="Digite uma nova senha" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500 text-xs sm:text-sm bg-white font-medium">
+          <button type="submit" id="btn-saas-pwd-save" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition shadow-sm whitespace-nowrap cursor-pointer">
+            <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar
+          </button>
+        </div>
+        <p id="saas-pwd-feedback" class="text-xs text-emerald-600 font-medium hidden"></p>
+      </form>
+
+      <!-- Botão de Compartilhar no WhatsApp -->
+      <div class="pt-2 border-t border-slate-100">
+        <button type="button" onclick="sendClinicCredentialsWhatsApp()" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-200 transition flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-brands fa-whatsapp text-base"></i> Enviar Acesso no WhatsApp do Cliente
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: CADASTRAR / EDITAR CLIENTE -->
   <div id="modal-client" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
@@ -2135,6 +2278,11 @@
             <td class="py-3.5 px-4">
               <div class="font-semibold text-slate-800">${c.owner_name || 'Responsável'}</div>
               <div class="text-[11px] text-slate-400">${c.owner_email || '--'}</div>
+              ${c.owner_password ? `
+                <div class="mt-0.5 flex items-center gap-1">
+                  <span class="text-[11px] font-mono bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-bold" title="Senha de acesso do cliente">🔑 ${c.owner_password}</span>
+                </div>
+              ` : ''}
               ${cleanPhone ? `
                 <a href="https://wa.me/${cleanPhone}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-bold hover:underline mt-0.5">
                   <i class="fa-brands fa-whatsapp"></i> ${ownerPhone}
@@ -2155,8 +2303,18 @@
             </td>
 
             <td class="py-3.5 px-4">
-              ${isMatriz ? '<span class="text-xs text-slate-400 italic text-center block">Clínica Principal</span>' : `
+              ${isMatriz ? `
+                <div class="flex items-center justify-center gap-1.5">
+                  <button onclick="openClinicPasswordModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${(c.owner_name || '').replace(/'/g, "\\'")}', '${(c.owner_email || '').replace(/'/g, "\\'")}', '${(c.owner_password || '').replace(/'/g, "\\'")}', '${c.phone || ''}')" title="Ver / Redefinir Senha da Matriz" class="px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-key text-amber-600"></i> Senha
+                  </button>
+                </div>
+              ` : `
                 <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                  <button onclick="openClinicPasswordModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${(c.owner_name || '').replace(/'/g, "\\'")}', '${(c.owner_email || '').replace(/'/g, "\\'")}', '${(c.owner_password || '').replace(/'/g, "\\'")}', '${c.phone || ''}')" title="Ver / Alterar Senha de Acesso" class="px-2 py-1.5 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                    <i class="fa-solid fa-key text-amber-600"></i> Senha
+                  </button>
+
                   <button onclick="openRenewClinicModal(${c.id}, '${c.name.replace(/'/g, "\\'")}', '${c.plan || 'essencial'}', ${c.monthly_price || 79})" title="Confirmar Pagamento e Renovar" class="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
                     <i class="fa-solid fa-money-bill-wave"></i> Renovar
                   </button>
@@ -2276,6 +2434,242 @@
         `👤 *Titular:* ${pixName}\n\n` +
         `Assim que realizar o PIX, basta enviar o comprovante por aqui para mantermos o link das suas clientes ativo!\n\n` +
         `Qualquer dúvida, estamos à disposição. 😊`
+      );
+
+      window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+    }
+
+    // --- FUNÇÕES DE RECUPERAÇÃO DE SENHA (CLIENTES & GESTORES) ---
+    function openForgotPasswordModal() {
+      document.getElementById('form-forgot-step1').classList.remove('hidden');
+      document.getElementById('form-forgot-step2').classList.add('hidden');
+      document.getElementById('forgot-error').classList.add('hidden');
+      document.getElementById('reset-error').classList.add('hidden');
+      document.getElementById('forgot-email-input').value = document.getElementById('login-email-input')?.value || '';
+      document.getElementById('modal-forgot-password').classList.remove('hidden');
+      setTimeout(() => document.getElementById('forgot-email-input').focus(), 150);
+    }
+
+    function closeForgotPasswordModal() {
+      document.getElementById('modal-forgot-password').classList.add('hidden');
+    }
+
+    function backToStep1Forgot() {
+      document.getElementById('form-forgot-step2').classList.add('hidden');
+      document.getElementById('form-forgot-step1').classList.remove('hidden');
+    }
+
+    async function submitForgotPassword(e) {
+      e.preventDefault();
+      const errEl = document.getElementById('forgot-error');
+      errEl.classList.add('hidden');
+      const btn = document.getElementById('btn-forgot-send');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Gerando código...';
+
+      const email = document.getElementById('forgot-email-input').value.trim();
+
+      try {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          errEl.textContent = data.detail || 'Não foi possível solicitar a recuperação. Verifique o e-mail.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        // Sucesso: avançar para o passo 2
+        document.getElementById('form-forgot-step1').classList.add('hidden');
+        document.getElementById('form-forgot-step2').classList.remove('hidden');
+        
+        let detailMsg = `Código enviado para o e-mail <b>${email}</b>.`;
+        if (data.code) {
+          detailMsg += `<br><span class="inline-block mt-1 bg-white px-2 py-0.5 rounded border border-emerald-300 font-mono font-bold text-emerald-800">Seu código: ${data.code}</span>`;
+          document.getElementById('reset-token-input').value = data.code;
+        }
+        document.getElementById('forgot-code-detail').innerHTML = detailMsg;
+        setTimeout(() => document.getElementById('reset-password-input').focus(), 150);
+      } catch (err) {
+        errEl.textContent = 'Erro ao conectar ao servidor. Tente novamente.';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    async function submitResetPassword(e) {
+      e.preventDefault();
+      const errEl = document.getElementById('reset-error');
+      errEl.classList.add('hidden');
+      const btn = document.getElementById('btn-reset-submit');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Redefinindo senha...';
+
+      const token = document.getElementById('reset-token-input').value.trim();
+      const new_password = document.getElementById('reset-password-input').value;
+
+      try {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, new_password })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          errEl.textContent = data.detail || 'Código inválido ou expirado. Tente novamente.';
+          errEl.classList.remove('hidden');
+          return;
+        }
+
+        alert(data.message || 'Senha redefinida com sucesso! Faça login com a nova senha.');
+        closeForgotPasswordModal();
+        
+        // Preenche automaticamente o form de login
+        const emailSent = document.getElementById('forgot-email-input').value.trim();
+        if (emailSent) document.getElementById('login-email-input').value = emailSent;
+        document.getElementById('login-password-input').value = new_password;
+        document.getElementById('login-password-input').focus();
+      } catch (err) {
+        errEl.textContent = 'Erro de conexão ao redefinir a senha.';
+        errEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // --- FUNÇÕES DE VISUALIZAÇÃO E ALTERAÇÃO DE SENHA DO SUPERADMIN ---
+    let currentSaasPasswordData = null;
+
+    function openClinicPasswordModal(id, clinicName, ownerName, ownerEmail, ownerPassword, phone) {
+      currentSaasPasswordData = { id, clinicName, ownerName, ownerEmail, ownerPassword, phone };
+      document.getElementById('saas-pwd-clinic-id').value = id;
+      document.getElementById('saas-pwd-clinic-name').textContent = clinicName;
+      document.getElementById('saas-pwd-owner-name').textContent = ownerName || 'Não informado';
+      document.getElementById('saas-pwd-owner-email').textContent = ownerEmail || '--';
+      
+      const pwdDisplay = document.getElementById('saas-pwd-display');
+      pwdDisplay.value = ownerPassword || 'Não cadastrada';
+      pwdDisplay.type = 'password';
+      document.getElementById('saas-pwd-toggle-icon').className = 'fa-regular fa-eye text-sm';
+      
+      document.getElementById('saas-pwd-new-input').value = '';
+      const feedback = document.getElementById('saas-pwd-feedback');
+      feedback.classList.add('hidden');
+      feedback.textContent = '';
+      
+      document.getElementById('modal-saas-password').classList.remove('hidden');
+    }
+
+    function closeClinicPasswordModal() {
+      document.getElementById('modal-saas-password').classList.add('hidden');
+      currentSaasPasswordData = null;
+    }
+
+    function toggleSuperadminViewPassword() {
+      const input = document.getElementById('saas-pwd-display');
+      const icon = document.getElementById('saas-pwd-toggle-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash text-sm text-amber-600';
+      } else {
+        input.type = 'password';
+        icon.className = 'fa-regular fa-eye text-sm';
+      }
+    }
+
+    function copyClinicPassword() {
+      const input = document.getElementById('saas-pwd-display');
+      if (!input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        alert("Senha copiada para a área de transferência!");
+      }).catch(() => {
+        input.select();
+        document.execCommand('copy');
+        alert("Senha copiada!");
+      });
+    }
+
+    async function submitSuperadminChangePassword(e) {
+      e.preventDefault();
+      if (!currentSaasPasswordData) return;
+      const clinicId = currentSaasPasswordData.id;
+      const new_password = document.getElementById('saas-pwd-new-input').value.trim();
+      const btn = document.getElementById('btn-saas-pwd-save');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      try {
+        const res = await fetch(`/api/superadmin/clinics/${clinicId}/change-password`, {
+          method: 'POST',
+          headers: getAdminHeaders(),
+          body: JSON.stringify({ new_password })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(data.detail || 'Erro ao alterar a senha da clínica.');
+          return;
+        }
+
+        // Atualiza na tela e no cache local
+        currentSaasPasswordData.ownerPassword = new_password;
+        document.getElementById('saas-pwd-display').value = new_password;
+        document.getElementById('saas-pwd-display').type = 'text';
+        document.getElementById('saas-pwd-toggle-icon').className = 'fa-regular fa-eye-slash text-sm text-amber-600';
+        document.getElementById('saas-pwd-new-input').value = '';
+
+        const feedback = document.getElementById('saas-pwd-feedback');
+        feedback.textContent = `✅ Senha alterada com sucesso para: ${new_password}`;
+        feedback.classList.remove('hidden');
+
+        // Atualiza no array allSaasClinics para refletir na tabela
+        const targetClinic = allSaasClinics.find(c => c.id === clinicId);
+        if (targetClinic) {
+          targetClinic.owner_password = new_password;
+          renderSaasClinicsTable();
+        }
+      } catch (err) {
+        alert('Erro ao conectar ao servidor para alterar senha.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    function sendClinicCredentialsWhatsApp() {
+      if (!currentSaasPasswordData) return;
+      const phone = currentSaasPasswordData.phone || '';
+      let cleanPhone = phone.replace(/\D/g, '');
+      if (!cleanPhone.startsWith('55') && cleanPhone.length <= 11 && cleanPhone.length >= 10) cleanPhone = '55' + cleanPhone;
+
+      if (!cleanPhone) {
+        alert("Este estabelecimento não possui número de WhatsApp cadastrado.");
+        return;
+      }
+
+      const clinicName = currentSaasPasswordData.clinicName;
+      const email = currentSaasPasswordData.ownerEmail || '';
+      const pwd = document.getElementById('saas-pwd-display').value || currentSaasPasswordData.ownerPassword || '';
+      const loginUrl = window.location.origin + '/admin';
+
+      const msg = encodeURIComponent(
+        `Olá, ${currentSaasPasswordData.ownerName || 'tudo bem'}!\n\n` +
+        `Aqui estão os dados de acesso ao painel de gestão do seu estabelecimento *${clinicName}*:\n\n` +
+        `🔗 *Link de Acesso:* ${loginUrl}\n` +
+        `👤 *E-mail / Usuário:* ${email}\n` +
+        `🔑 *Senha de Acesso:* ${pwd}\n\n` +
+        `Guarde esta mensagem com cuidado. Se precisar de qualquer suporte, conte conosco! ✨`
       );
 
       window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
