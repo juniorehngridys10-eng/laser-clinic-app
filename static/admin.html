@@ -92,63 +92,53 @@
 
   <!-- TELA DE LOGIN / ACESSO DO PAINEL SAAS -->
   <div id="login-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 animate-scale">
       <div class="text-center space-y-2">
         <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-rose-500 to-pink-500 text-white flex items-center justify-center text-2xl mx-auto shadow-lg shadow-rose-200">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <i class="fa-solid fa-user-shield"></i>
         </div>
-        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Painel da Clínica</h2>
-        <p class="text-xs text-slate-500">Gestão completa de pacientes, agendamentos e faturamento.</p>
-      </div>
-
-      <!-- Abas de Login (Email / PIN) -->
-      <div class="flex bg-slate-100 p-1 rounded-2xl text-xs font-semibold">
-        <button type="button" id="tab-login-email" onclick="switchLoginMode('email')" class="flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm transition">
-          <i class="fa-solid fa-envelope mr-1.5 text-rose-500"></i> Email & Senha
-        </button>
-        <button type="button" id="tab-login-pin" onclick="switchLoginMode('pin')" class="flex-1 py-2 rounded-xl text-slate-500 hover:text-slate-800 transition">
-          <i class="fa-solid fa-key mr-1.5 text-slate-400"></i> PIN Rápido (1234)
-        </button>
+        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Acesso Administrativo</h2>
+        <p class="text-xs text-slate-500">Entre com seu e-mail e senha de administrador para gerenciar o sistema.</p>
       </div>
 
       <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
         <!-- Campos Email / Senha -->
-        <div id="login-fields-email" class="space-y-3">
+        <div class="space-y-3.5">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Email Cadastrado:</label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail ou Usuário:</label>
             <div class="relative">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-envelope text-sm"></i></span>
-              <input type="email" id="login-email-input" placeholder="admin@suaclinica.com" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-user text-sm"></i></span>
+              <input type="text" id="login-email-input" required placeholder="admin ou seu@email.com" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50 font-medium">
             </div>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Senha:</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-700">Senha de Acesso:</label>
+              <button type="button" onclick="togglePasswordVisibility()" class="text-[11px] text-rose-600 hover:underline flex items-center gap-1 cursor-pointer">
+                <i id="pwd-toggle-icon" class="fa-regular fa-eye text-xs"></i> <span id="pwd-toggle-text">Mostrar</span>
+              </button>
+            </div>
             <div class="relative">
               <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-lock text-sm"></i></span>
-              <input type="password" id="login-password-input" placeholder="••••••••" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50">
+              <input type="password" id="login-password-input" required placeholder="Digite sua senha" class="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 text-sm bg-slate-50 font-medium">
             </div>
           </div>
         </div>
 
-        <!-- Campo PIN Legado -->
-        <div id="login-fields-pin" class="hidden space-y-2">
-          <label class="block text-xs font-semibold text-slate-700 text-center">Digite o PIN da clínica:</label>
-          <input type="password" id="admin-pin-input" maxlength="8" placeholder="1234" class="w-full text-center tracking-widest text-2xl font-bold px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50">
-          <p class="text-[11px] text-center text-slate-400">PIN padrão da clínica inicial: <strong>1234</strong></p>
-        </div>
+        <p id="login-error" class="text-xs text-rose-500 font-medium text-center hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200"></p>
 
-        <p id="login-error" class="text-xs text-rose-500 font-medium text-center hidden"></p>
-
-        <button type="submit" id="btn-login-submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold shadow-md shadow-pink-200 transition text-sm">
-          Acessar Painel
+        <button type="submit" id="btn-login-submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold shadow-lg shadow-pink-200 transition text-sm flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Acessar Painel Administrativo
         </button>
       </form>
 
-      <!-- CTA de Nova Clínica (SaaS) -->
-      <div class="pt-3 border-t border-slate-100 text-center space-y-2">
-        <p class="text-xs text-slate-500">Quer usar este sistema na sua própria clínica?</p>
-        <a href="/criar-conta" class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3.5 py-2 rounded-xl transition border border-rose-200">
-          <i class="fa-solid fa-sparkles"></i> Criar Conta Grátis por 15 Dias
+      <!-- Atalhos e Links -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        <button type="button" onclick="fillAdminCredentials()" class="text-[11px] text-slate-400 hover:text-rose-600 transition flex items-center gap-1 hover:underline cursor-pointer" title="Preencher usuário e senha padrão">
+          <i class="fa-solid fa-key text-[10px]"></i> Preencher admin matriz
+        </button>
+        <a href="/criar-conta" class="text-[11px] font-bold text-rose-600 hover:text-rose-700 hover:underline">
+          Criar Novo Estabelecimento
         </a>
       </div>
     </div>
@@ -1291,10 +1281,10 @@
       <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-3xl">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-md shadow-pink-200">
-            <i class="fa-solid fa-notes-medical"></i>
+            <i id="anamnese-modal-icon" class="fa-solid fa-notes-medical"></i>
           </div>
           <div>
-            <h3 class="font-bold text-lg text-slate-900">Ficha do Cliente & Termo de Anamnese</h3>
+            <h3 id="anamnese-modal-title" class="font-bold text-lg text-slate-900">Ficha do Cliente & Termo de Anamnese</h3>
             <p id="anamnese-client-header" class="text-xs text-slate-500 font-medium">Cliente: Mariana Silva | WhatsApp: 11987654321</p>
           </div>
         </div>
@@ -1400,8 +1390,8 @@
             </div>
           </div>
 
-          <!-- 2. TRATAMENTO & ÁREAS -->
-          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+          <!-- 2. TRATAMENTO & ÁREAS (Exclusivo Laser) -->
+          <div id="anamnese-sec-treatment" class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
               <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> 2. Tratamento & Áreas Selecionadas
@@ -1442,8 +1432,8 @@
             </div>
           </div>
 
-          <!-- 3. HISTÓRICO DE PATOLOGIAS (MARCAR AS OPÇÕES) -->
-          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+          <!-- 3. HISTÓRICO DE PATOLOGIAS (Exclusivo Laser) -->
+          <div id="anamnese-sec-patologias" class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
             <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
               <i class="fa-solid fa-heart-pulse"></i> 3. Histórico de Patologias & Condições de Saúde
             </h4>
@@ -1454,8 +1444,8 @@
             </div>
           </div>
 
-          <!-- 4. HISTÓRICO ATUAL / QUESTIONÁRIO MÉDICO (SIM / NÃO / ESPECIFIQUE) -->
-          <div class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
+          <!-- 4. HISTÓRICO ATUAL / QUESTIONÁRIO MÉDICO (Exclusivo Laser) -->
+          <div id="anamnese-sec-perguntas" class="border border-slate-200 rounded-2xl p-4 space-y-3 bg-white">
             <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
               <i class="fa-solid fa-stethoscope"></i> 4. Questionário Médico & Medicamentos Atuais
             </h4>
@@ -1466,11 +1456,10 @@
 
           <!-- 5. REAÇÃO AO SOL / FOTOTIPO & ASSINATURA -->
           <div class="border border-slate-200 rounded-2xl p-4 space-y-4 bg-white">
-            <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
-              <i class="fa-solid fa-sun"></i> 5. Reação da Pele ao Sol & Termo de Responsabilidade
-            </h4>
-
-            <div class="space-y-2">
+            <div id="anamnese-sec-sol" class="space-y-2">
+              <h4 class="font-bold text-sm text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+                <i class="fa-solid fa-sun"></i> 5. Reação da Pele ao Sol
+              </h4>
               <p class="font-semibold text-slate-700">Como a sua pele reage quando você se expõe ao sol?</p>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                 <label class="p-2 border rounded-xl flex items-center gap-2 cursor-pointer hover:bg-slate-50">
@@ -1490,7 +1479,7 @@
 
             <!-- Termo e Assinatura Digital do Cliente -->
             <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-              <p class="text-[11px] text-slate-600 italic leading-relaxed">
+              <p id="anamnese-legal-text" class="text-[11px] text-slate-600 italic leading-relaxed">
                 "Confirmo ter respondido ao presente questionário com total sinceridade e verdade. Estou ciente das recomendações e cuidados pré e pós-aplicação de depilação a laser informados pela clínica."
               </p>
 
@@ -1738,26 +1727,25 @@
     let currentModalData = null;
     let selectedRescheduleTime = null;
 
-    function switchLoginMode(mode) {
-      currentLoginMode = mode;
-      const tabEmail = document.getElementById('tab-login-email');
-      const tabPin = document.getElementById('tab-login-pin');
-      const fieldsEmail = document.getElementById('login-fields-email');
-      const fieldsPin = document.getElementById('login-fields-pin');
-      const errEl = document.getElementById('login-error');
-      if (errEl) errEl.classList.add('hidden');
-
-      if (mode === 'email') {
-        tabEmail.className = "flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm transition";
-        tabPin.className = "flex-1 py-2 rounded-xl text-slate-500 hover:text-slate-800 transition";
-        fieldsEmail.classList.remove('hidden');
-        fieldsPin.classList.add('hidden');
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('login-password-input');
+      const icon = document.getElementById('pwd-toggle-icon');
+      const text = document.getElementById('pwd-toggle-text');
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.className = 'fa-regular fa-eye-slash text-xs';
+        text.textContent = 'Ocultar';
       } else {
-        tabPin.className = "flex-1 py-2 rounded-xl bg-white text-slate-800 shadow-sm transition";
-        tabEmail.className = "flex-1 py-2 rounded-xl text-slate-500 hover:text-slate-800 transition";
-        fieldsPin.classList.remove('hidden');
-        fieldsEmail.classList.add('hidden');
+        pwdInput.type = 'password';
+        icon.className = 'fa-regular fa-eye text-xs';
+        text.textContent = 'Mostrar';
       }
+    }
+
+    function fillAdminCredentials() {
+      document.getElementById('login-email-input').value = 'admin@laserglow.com';
+      document.getElementById('login-password-input').value = '1234';
+      document.getElementById('login-email-input').focus();
     }
 
     window.onload = () => {
@@ -1776,31 +1764,20 @@
       const btnSubmit = document.getElementById('btn-login-submit');
       const originalText = btnSubmit.innerHTML;
       btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Entrando...';
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Verificando credenciais...';
 
-      let payload = {};
-      if (currentLoginMode === 'email') {
-        const email = document.getElementById('login-email-input').value.trim();
-        const password = document.getElementById('login-password-input').value;
-        if (!email || !password) {
-          errEl.textContent = "Por favor, informe seu email e senha.";
-          errEl.classList.remove('hidden');
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = originalText;
-          return;
-        }
-        payload = { email, password };
-      } else {
-        const pin = document.getElementById('admin-pin-input').value.trim();
-        if (!pin) {
-          errEl.textContent = "Por favor, digite o PIN.";
-          errEl.classList.remove('hidden');
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = originalText;
-          return;
-        }
-        payload = { pin };
+      const email = document.getElementById('login-email-input').value.trim();
+      const password = document.getElementById('login-password-input').value;
+
+      if (!email || !password) {
+        errEl.textContent = "Por favor, informe seu email ou usuário e senha.";
+        errEl.classList.remove('hidden');
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = originalText;
+        return;
       }
+
+      const payload = { email, password };
 
       try {
         const res = await fetch('/api/auth/login', {
@@ -2388,6 +2365,9 @@
 
     function renderClients(clients) {
       const tbody = document.getElementById('clients-tbody');
+      const clinicSegment = (currentUser && currentUser.clinic && currentUser.clinic.segment) ? currentUser.clinic.segment : 'laser';
+      const isNonMedical = clinicSegment === 'salao' || clinicSegment === 'barbearia' || clinicSegment === 'unhas';
+
       if (clients.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum cliente cadastrado ainda.</td></tr>`;
         return;
@@ -2420,12 +2400,21 @@
             </td>
             <td class="py-4 px-4 text-xs text-slate-500">${lastDate}</td>
             <td class="py-4 px-4 text-center space-x-1.5 whitespace-nowrap">
-              <button onclick="openAnamneseModal(${c.id})" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs transition border border-rose-200" title="Ver / Preencher Ficha do Cliente (Luz e Pele)">
-                <i class="fa-solid fa-file-medical mr-1"></i> Ficha Anamnese
-              </button>
-              <button onclick="sendFichaLinkToClient('${c.name}', '${c.phone}')" class="px-2 py-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-xs transition border border-teal-200" title="Enviar Link da Ficha para o Cliente Preencher e Assinar no WhatsApp">
-                <i class="fa-solid fa-signature text-xs mr-1"></i> Enviar Ficha
-              </button>
+              ${isNonMedical ? `
+                <button onclick="openAnamneseModal(${c.id})" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs transition border border-rose-200" title="Ver Cadastro & Assinatura Digital">
+                  <i class="fa-solid fa-signature mr-1"></i> Cadastro & Assinatura
+                </button>
+                <button onclick="sendFichaLinkToClient('${c.name}', '${c.phone}')" class="px-2 py-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-xs transition border border-teal-200" title="Enviar Link de Cadastro & Assinatura para o Cliente no WhatsApp">
+                  <i class="fa-brands fa-whatsapp text-xs mr-1"></i> Enviar Cadastro
+                </button>
+              ` : `
+                <button onclick="openAnamneseModal(${c.id})" class="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold text-xs transition border border-rose-200" title="Ver / Preencher Ficha do Cliente (Luz e Pele)">
+                  <i class="fa-solid fa-file-medical mr-1"></i> Ficha Anamnese
+                </button>
+                <button onclick="sendFichaLinkToClient('${c.name}', '${c.phone}')" class="px-2 py-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-xs transition border border-teal-200" title="Enviar Link da Ficha para o Cliente Preencher e Assinar no WhatsApp">
+                  <i class="fa-solid fa-signature text-xs mr-1"></i> Enviar Ficha
+                </button>
+              `}
               <button onclick="openWhatsAppModalForClient('${c.name}', '${c.phone}')" class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition" title="Chamar no WhatsApp">
                 <i class="fa-brands fa-whatsapp text-sm"></i>
               </button>
@@ -2610,6 +2599,39 @@
       buildAnamneseDOM();
       document.getElementById('form-anamnese').reset();
       document.getElementById('anamnese-client-id').value = clientId;
+
+      const clinicSegment = (currentUser && currentUser.clinic && currentUser.clinic.segment) ? currentUser.clinic.segment : 'laser';
+      const isNonMedical = clinicSegment === 'salao' || clinicSegment === 'barbearia' || clinicSegment === 'unhas';
+
+      const secTreat = document.getElementById('anamnese-sec-treatment');
+      const secPat = document.getElementById('anamnese-sec-patologias');
+      const secPerg = document.getElementById('anamnese-sec-perguntas');
+      const secSol = document.getElementById('anamnese-sec-sol');
+      const modalTitle = document.getElementById('anamnese-modal-title');
+      const modalIcon = document.getElementById('anamnese-modal-icon');
+      const legalTextEl = document.getElementById('anamnese-legal-text');
+
+      if (isNonMedical) {
+        if (secTreat) secTreat.classList.add('hidden');
+        if (secPat) secPat.classList.add('hidden');
+        if (secPerg) secPerg.classList.add('hidden');
+        if (secSol) secSol.classList.add('hidden');
+        if (modalTitle) modalTitle.textContent = "Cadastro do Cliente & Assinatura Digital";
+        if (modalIcon) modalIcon.className = "fa-solid fa-signature";
+        if (legalTextEl) {
+          legalTextEl.textContent = '"Declaro que as informações cadastrais prestadas são verdadeiras. Comprometo-me a cumprir os horários agendados e autorizo o envio de lembretes via WhatsApp e armazenamento conforme a LGPD."';
+        }
+      } else {
+        if (secTreat) secTreat.classList.remove('hidden');
+        if (secPat) secPat.classList.remove('hidden');
+        if (secPerg) secPerg.classList.remove('hidden');
+        if (secSol) secSol.classList.remove('hidden');
+        if (modalTitle) modalTitle.textContent = "Ficha do Cliente & Termo de Anamnese";
+        if (modalIcon) modalIcon.className = "fa-solid fa-notes-medical";
+        if (legalTextEl) {
+          legalTextEl.textContent = '"Confirmo ter respondido ao presente questionário com total sinceridade e verdade. Estou ciente das recomendações e cuidados pré e pós-aplicação de depilação a laser informados pela clínica."';
+        }
+      }
 
       try {
         const res = await fetch(`/api/admin/clients/${clientId}/anamnese`, { headers: getAdminHeaders() });
@@ -3530,9 +3552,21 @@
 
     function sendFichaLinkToClient(name, phone) {
       const origin = window.location.origin;
-      const link = `${origin}/ficha?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`;
-      const clinicName = document.getElementById('admin-display-name').textContent || 'LaserGlow Clinic';
-      const text = encodeURIComponent(`Olá ${name}! Tudo bem?\n\nPara agilizar o seu atendimento na ${clinicName}, por favor preencha sua Ficha Cadastral e assine o termo digitalmente pelo link abaixo:\n\n👉 ${link}\n\nLeva menos de 2 minutinhos e você pode assinar diretamente na tela do seu celular com o dedo! ✨`);
+      const clinicSlug = (currentUser && currentUser.clinic && currentUser.clinic.slug) ? currentUser.clinic.slug : '';
+      const clinicSegment = (currentUser && currentUser.clinic && currentUser.clinic.segment) ? currentUser.clinic.segment : 'laser';
+      const isNonMedical = clinicSegment === 'salao' || clinicSegment === 'barbearia' || clinicSegment === 'unhas';
+
+      const basePath = clinicSlug ? `/c/${clinicSlug}/ficha` : '/ficha';
+      const link = `${origin}${basePath}?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`;
+      const clinicName = document.getElementById('admin-display-name').textContent || 'Espaço';
+
+      let text;
+      if (isNonMedical) {
+        text = encodeURIComponent(`Olá ${name}! Tudo bem?\n\nPara agilizar o seu atendimento na ${clinicName}, por favor complete seu cadastro e assine o termo digitalmente pelo link abaixo:\n\n👉 ${link}\n\nÉ super rápido e você pode assinar com o dedo direto na tela do seu celular! ✨`);
+      } else {
+        text = encodeURIComponent(`Olá ${name}! Tudo bem?\n\nPara agilizar o seu atendimento na ${clinicName}, por favor preencha sua Ficha Cadastral e assine o termo digitalmente pelo link abaixo:\n\n👉 ${link}\n\nLeva menos de 2 minutinhos e você pode assinar diretamente na tela do seu celular com o dedo! ✨`);
+      }
+
       let cleanPhone = phone.replace(/\D/g, '');
       if (cleanPhone.length <= 11 && !cleanPhone.startsWith('55')) cleanPhone = '55' + cleanPhone;
       window.open(`https://web.whatsapp.com/send?phone=${cleanPhone}&text=${text}`, '_blank');
