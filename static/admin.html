@@ -21,7 +21,7 @@
         color: #0f172a !important;
       }
       /* Hide regular page elements */
-      header, #login-screen, #nav-tabs-wrapper, .no-print, .modal-backdrop {
+      header, #login-screen, #nav-tabs-wrapper, #app-sidebar, #sidebar-backdrop, .no-print, .modal-backdrop {
         display: none !important;
       }
       
@@ -88,7 +88,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col">
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased flex flex-col md:flex-row">
 
   <!-- TELA DE LOGIN / ACESSO DO PAINEL SAAS -->
   <div id="login-screen" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -144,54 +144,152 @@
     </div>
   </div>
 
-  <!-- Top Navigation -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+  <!-- BACKDROP MOBILE PARA O MENU LATERAL -->
+  <div id="sidebar-backdrop" onclick="closeSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 hidden transition-opacity md:hidden no-print"></div>
+
+  <!-- MENU LATERAL (SIDEBAR) -->
+  <aside id="app-sidebar" class="fixed inset-y-0 left-0 z-50 w-72 md:w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 transform -translate-x-full md:translate-x-0 md:static md:h-screen md:sticky top-0 shadow-xl md:shadow-none no-print">
+    
+    <!-- Topo da Barra Lateral: Logo & Identificação -->
+    <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3">
       <div class="flex items-center gap-3 min-w-0">
         <div id="admin-logo-wrapper" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-500 to-pink-500 flex items-center justify-center text-white shadow-md shadow-pink-200 overflow-hidden flex-shrink-0">
           <i id="admin-logo-icon" class="fa-solid fa-wand-magic-sparkles text-lg"></i>
           <img id="admin-logo-img" src="" alt="Logo" class="w-full h-full object-cover hidden">
         </div>
         <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <span id="admin-display-name" class="font-bold text-base sm:text-lg text-slate-900 tracking-tight truncate">LaserGlow Clinic</span>
-            <span id="trial-badge" class="hidden text-[11px] bg-amber-50 text-amber-700 border border-amber-200 font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
-              <i class="fa-solid fa-crown text-amber-500 mr-1"></i><span id="trial-badge-text">15 dias teste</span>
-            </span>
+          <span id="admin-display-name" class="font-extrabold text-sm sm:text-base text-slate-900 tracking-tight truncate block">LaserGlow Clinic</span>
+          <span id="trial-badge" class="hidden text-[10px] bg-amber-50 text-amber-700 border border-amber-200 font-bold px-2 py-0.5 rounded-full whitespace-nowrap mt-0.5 inline-block">
+            <i class="fa-solid fa-crown text-amber-500 mr-1"></i><span id="trial-badge-text">15 dias teste</span>
+          </span>
+        </div>
+      </div>
+      <button type="button" onclick="closeSidebar()" class="md:hidden text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 cursor-pointer" title="Fechar Menu">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Navegação / Links do Menu Lateral -->
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-5 text-xs sm:text-sm">
+      
+      <!-- Grupo 1: Atendimento -->
+      <div class="space-y-1">
+        <p class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Atendimento</p>
+        <button id="tab-btn-appointments" onclick="switchTab('appointments')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold bg-rose-50 text-rose-700 border border-rose-200/70 text-left transition cursor-pointer">
+          <i class="fa-regular fa-calendar-days text-rose-500 w-4 text-center"></i>
+          <span>Atendimentos</span>
+        </button>
+        <button id="tab-btn-clients" onclick="switchTab('clients')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-users text-purple-500 w-4 text-center"></i>
+          <span>Clientes & Fichas</span>
+        </button>
+        <button id="tab-btn-packages-control" onclick="switchTab('packages-control')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-clipboard-check text-indigo-500 w-4 text-center"></i>
+          <span>Controle de Pacotes</span>
+        </button>
+      </div>
+
+      <!-- Grupo 2: Gestão Financeira & Inteligência -->
+      <div class="space-y-1">
+        <p class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Gestão & Vendas</p>
+        <button id="tab-btn-cashflow" onclick="switchTab('cashflow')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-wallet text-emerald-500 w-4 text-center"></i>
+          <span>Fluxo de Caixa</span>
+        </button>
+        <button id="tab-btn-analytics" onclick="switchTab('analytics')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-chart-line text-blue-500 w-4 text-center"></i>
+          <span>Análise Anti-Perda</span>
+        </button>
+        <button id="tab-btn-reports" onclick="switchTab('reports')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-print text-slate-500 w-4 text-center"></i>
+          <span>Relatórios & PDF</span>
+        </button>
+      </div>
+
+      <!-- Grupo 3: Configurações do Negócio -->
+      <div class="space-y-1">
+        <p class="px-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Configurações</p>
+        <button id="tab-btn-packages" onclick="switchTab('packages')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-tags text-amber-500 w-4 text-center"></i>
+          <span>Preços & Serviços</span>
+        </button>
+        <button id="tab-btn-settings" onclick="switchTab('settings')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-clock text-rose-500 w-4 text-center"></i>
+          <span>Horários & Empresa</span>
+        </button>
+      </div>
+
+      <!-- Grupo 4: SuperAdmin Master (visível apenas para SuperAdmin) -->
+      <div id="sidebar-saas-group" class="space-y-1">
+        <button id="tab-btn-saas" onclick="switchTab('saas')" class="hidden w-full items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-amber-800 hover:bg-amber-100/70 border border-amber-300 bg-amber-50/70 text-left transition cursor-pointer">
+          <i class="fa-solid fa-crown text-amber-500 w-4 text-center"></i>
+          <span>Gestão de Clínicas (SaaS)</span>
+        </button>
+      </div>
+
+    </nav>
+
+    <!-- Rodapé do Menu Lateral: Perfil do Usuário & Sair -->
+    <div class="p-3 border-t border-slate-100 bg-slate-50/70 space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+            <i class="fa-solid fa-user"></i>
           </div>
-          <p id="admin-user-info" class="text-[11px] text-slate-400 truncate hidden"></p>
+          <div class="min-w-0">
+            <p id="sidebar-user-name" class="text-xs font-bold text-slate-800 truncate">Administrador</p>
+            <p id="sidebar-user-email" class="text-[10px] text-slate-400 truncate">admin@laserglow.com</p>
+          </div>
+        </div>
+        <button onclick="logoutAdmin()" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition cursor-pointer" title="Sair do Sistema">
+          <i class="fa-solid fa-right-from-bracket text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTEÚDO PRINCIPAL (ÁREA DIREITA) -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-screen">
+    
+    <!-- Top Bar Superior -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs h-16 flex items-center justify-between px-4 sm:px-6 gap-3 no-print">
+      <div class="flex items-center gap-3 min-w-0">
+        <button type="button" onclick="toggleSidebar()" class="md:hidden text-slate-600 hover:text-slate-900 p-2 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Abrir Menu">
+          <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+        <div>
+          <h1 id="page-current-title" class="font-bold text-base sm:text-lg text-slate-900 tracking-tight truncate">Atendimentos</h1>
         </div>
       </div>
 
-      <!-- Link Público Compartilhável & Ações -->
+      <!-- Links Rápidos e Ações -->
       <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
         <!-- Pill com Link do Paciente -->
-        <div id="clinic-link-box" class="hidden md:flex items-center gap-1.5 bg-rose-50 border border-rose-200/80 px-2.5 py-1.5 rounded-xl text-xs">
+        <div id="clinic-link-box" class="hidden sm:flex items-center gap-1.5 bg-rose-50 border border-rose-200/80 px-2.5 py-1.5 rounded-xl text-xs">
           <span class="text-rose-700 font-semibold flex items-center gap-1">
             <i class="fa-solid fa-link text-[10px]"></i> Link Paciente:
           </span>
           <span id="clinic-slug-url" class="font-mono text-slate-700 font-medium select-all">/agendar</span>
-          <button type="button" onclick="copyClinicBookingLink()" title="Copiar Link de Agendamento" class="text-rose-600 hover:text-rose-800 p-1 hover:bg-rose-100 rounded transition">
+          <button type="button" onclick="copyClinicBookingLink()" title="Copiar Link de Agendamento" class="text-rose-600 hover:text-rose-800 p-1 hover:bg-rose-100 rounded transition cursor-pointer">
             <i class="fa-regular fa-copy"></i>
           </button>
-          <button type="button" onclick="shareClinicBookingWhatsApp()" title="Enviar Link no WhatsApp" class="text-emerald-600 hover:text-emerald-700 p-1 hover:bg-emerald-50 rounded transition">
+          <button type="button" onclick="shareClinicBookingWhatsApp()" title="Enviar Link no WhatsApp" class="text-emerald-600 hover:text-emerald-700 p-1 hover:bg-emerald-50 rounded transition cursor-pointer">
             <i class="fa-brands fa-whatsapp text-sm"></i>
           </button>
         </div>
 
-        <a id="btn-open-client-link" href="/agendar" target="_blank" class="text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-rose-200 transition flex items-center gap-1.5 shadow-sm whitespace-nowrap">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="hidden sm:inline">Abrir Link do Cliente</span><span class="sm:hidden">Agendar</span>
+        <a id="btn-open-client-link" href="/agendar" target="_blank" class="text-xs sm:text-sm font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border border-rose-200 transition flex items-center gap-1.5 shadow-xs whitespace-nowrap">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> <span class="hidden md:inline">Abrir Link do Cliente</span><span class="md:hidden">Agendar</span>
         </a>
 
-        <button onclick="logoutAdmin()" title="Sair do Sistema" class="text-xs font-semibold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-slate-200 p-2 sm:px-3 sm:py-1.5 rounded-xl transition flex items-center gap-1">
+        <button onclick="logoutAdmin()" title="Sair do Sistema" class="text-xs font-semibold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-slate-200 p-2 sm:px-3 sm:py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer">
           <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Sair</span>
         </button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- Main Content Layout -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+    <!-- Main Content Layout -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
 
     <!-- BANNER DE AVISO DE ASSINATURA PENDENTE / BLOQUEADA (Para Clínicas Clientes) -->
     <div id="saas-subscription-alert-box" class="hidden p-5 rounded-2xl border border-rose-200 bg-rose-50/95 text-rose-800 space-y-3 shadow-md">
@@ -264,37 +362,6 @@
         </p>
         <h3 id="stat-total-clients" class="text-lg sm:text-xl font-extrabold text-purple-600 mt-1">--</h3>
       </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div id="nav-tabs-wrapper" class="flex border-b border-slate-200 overflow-x-auto space-x-1 no-print">
-      <button id="tab-btn-appointments" onclick="switchTab('appointments')" class="px-4 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-regular fa-calendar-days"></i> Atendimentos
-      </button>
-      <button id="tab-btn-clients" onclick="switchTab('clients')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-user-plus"></i> Cadastro de Clientes
-      </button>
-      <button id="tab-btn-packages-control" onclick="switchTab('packages-control')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-clipboard-check"></i> Controle de Pacotes (Sessões)
-      </button>
-      <button id="tab-btn-cashflow" onclick="switchTab('cashflow')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-wallet"></i> Fluxo de Caixa
-      </button>
-      <button id="tab-btn-analytics" onclick="switchTab('analytics')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-chart-line"></i> Análise Anti-Perda (Retenção)
-      </button>
-      <button id="tab-btn-reports" onclick="switchTab('reports')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-print text-indigo-500"></i> Relatórios & Impressão
-      </button>
-      <button id="tab-btn-packages" onclick="switchTab('packages')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-tags"></i> Preços & Procedimentos
-      </button>
-      <button id="tab-btn-settings" onclick="switchTab('settings')" class="px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap">
-        <i class="fa-solid fa-clock text-rose-500"></i> Horários & Configurações
-      </button>
-      <button id="tab-btn-saas" onclick="switchTab('saas')" class="hidden px-4 py-3 font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-t-xl text-sm flex items-center gap-2 whitespace-nowrap border-t border-x border-amber-200">
-        <i class="fa-solid fa-crown text-amber-500"></i> Gestão de Clínicas (SaaS)
-      </button>
     </div>
 
     <!-- SEÇÃO 1: ATENDIMENTOS -->
@@ -1071,6 +1138,7 @@
     </section>
 
   </main>
+  </div>
 
   <!-- MODAL: CONFIGURAÇÃO DE RECEBIMENTO DO SUPERADMIN (CHAVE PIX E WHATSAPP) -->
   <div id="modal-saas-config" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -2014,11 +2082,18 @@
             userEl.textContent = `${currentUser.name} (${currentUser.email})`;
             userEl.classList.remove('hidden');
           }
+          const sbName = document.getElementById('sidebar-user-name');
+          if (sbName) sbName.textContent = currentUser.name || 'Administrador';
+          const sbEmail = document.getElementById('sidebar-user-email');
+          if (sbEmail) sbEmail.textContent = currentUser.email || '';
 
-          // Se for SuperAdmin (Clínica 1 ou is_superadmin=1), ativa a aba SaaS Master
+          // Se for SuperAdmin (Clínica 1 ou is_superadmin=1), ativa a aba SaaS Master no menu lateral
           if (currentUser.is_superadmin === 1 || currentClinic.id === 1) {
             const saasBtn = document.getElementById('tab-btn-saas');
-            if (saasBtn) saasBtn.classList.remove('hidden');
+            if (saasBtn) {
+              saasBtn.classList.remove('hidden');
+              saasBtn.classList.add('flex');
+            }
           }
         }
 
@@ -2088,6 +2163,34 @@
       loadClinicSettings();
     }
 
+    // --- CONTROLE DE NAVEGAÇÃO DO MENU LATERAL (SIDEBAR) ---
+    function toggleSidebar() {
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (!sidebar) return;
+      if (sidebar.classList.contains('-translate-x-full')) {
+        openSidebar();
+      } else {
+        closeSidebar();
+      }
+    }
+
+    function openSidebar() {
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (sidebar) sidebar.classList.remove('-translate-x-full');
+      if (backdrop) backdrop.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden', 'md:overflow-auto');
+    }
+
+    function closeSidebar() {
+      const sidebar = document.getElementById('app-sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      if (sidebar) sidebar.classList.add('-translate-x-full');
+      if (backdrop) backdrop.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden', 'md:overflow-auto');
+    }
+
     function switchTab(tab) {
       ['appointments', 'clients', 'packages-control', 'cashflow', 'analytics', 'reports', 'packages', 'settings', 'saas'].forEach(t => {
         const sec = document.getElementById(`section-${t}`);
@@ -2095,9 +2198,9 @@
         if (sec) sec.classList.add('hidden');
         if (btn) {
           if (t === 'saas') {
-            btn.className = "px-4 py-3 font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-t-xl text-sm flex items-center gap-2 whitespace-nowrap border-t border-x border-amber-200";
+            btn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-amber-800 hover:bg-amber-100/70 border border-amber-300 bg-amber-50/70 text-left transition cursor-pointer";
           } else {
-            btn.className = "px-4 py-3 font-medium text-slate-500 hover:text-slate-800 text-sm flex items-center gap-2 whitespace-nowrap";
+            btn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer";
           }
         }
       });
@@ -2107,10 +2210,28 @@
       if (activeSec) activeSec.classList.remove('hidden');
       if (activeBtn) {
         if (tab === 'saas') {
-          activeBtn.className = "px-4 py-3 font-bold text-amber-900 bg-amber-100 border-b-2 border-amber-500 rounded-t-xl text-sm flex items-center gap-2 whitespace-nowrap";
+          activeBtn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-extrabold bg-amber-100 text-amber-900 shadow-xs border border-amber-300 text-left cursor-pointer";
         } else {
-          activeBtn.className = "px-4 py-3 font-semibold text-rose-600 border-b-2 border-rose-500 text-sm flex items-center gap-2 whitespace-nowrap";
+          activeBtn.className = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold bg-rose-50 text-rose-700 shadow-xs border border-rose-200/70 text-left cursor-pointer";
         }
+      }
+
+      const tabTitles = {
+        'appointments': 'Atendimentos & Agenda',
+        'clients': 'Cadastro de Clientes & Fichas',
+        'packages-control': 'Controle de Pacotes (Sessões)',
+        'cashflow': 'Fluxo de Caixa',
+        'analytics': 'Análise Anti-Perda (Retenção)',
+        'reports': 'Relatórios & Impressão',
+        'packages': 'Preços & Procedimentos',
+        'settings': 'Horários & Estabelecimento',
+        'saas': 'Painel Master SuperAdmin (SaaS)'
+      };
+      const titleEl = document.getElementById('page-current-title');
+      if (titleEl) titleEl.textContent = tabTitles[tab] || 'Painel da Clínica';
+
+      if (window.innerWidth < 768) {
+        closeSidebar();
       }
 
       if (tab === 'packages' || tab === 'packages-control') { loadServices(); loadClientPackages(); }
