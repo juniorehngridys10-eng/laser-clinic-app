@@ -130,6 +130,7 @@ def init_db():
         monthly_price REAL DEFAULT 79.0,
         is_blocked INTEGER DEFAULT 0,
         notes TEXT DEFAULT '',
+        segment TEXT DEFAULT 'laser',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
@@ -144,6 +145,8 @@ def init_db():
         cursor.execute("ALTER TABLE clinics ADD COLUMN is_blocked INTEGER DEFAULT 0;")
     if "notes" not in c_cols:
         cursor.execute("ALTER TABLE clinics ADD COLUMN notes TEXT DEFAULT '';")
+    if "segment" not in c_cols:
+        cursor.execute("ALTER TABLE clinics ADD COLUMN segment TEXT DEFAULT 'laser';")
 
     # Tabela de Configuração Master do SaaS (Chave PIX e dados de recebimento do SuperAdmin)
     cursor.execute("""
@@ -620,6 +623,8 @@ def get_current_user(
             clinic = conn.execute("SELECT * FROM clinics WHERE id = ?", (payload["clinic_id"],)).fetchone()
             conn.close()
             if user and clinic:
+                c_dict = dict(clinic)
+                c_dict["segment"] = resolve_clinic_segment(c_dict)
                 return {
                     "id": user["id"],
                     "clinic_id": clinic["id"],
@@ -628,7 +633,7 @@ def get_current_user(
                     "role": user["role"],
                     "is_superadmin": user["is_superadmin"],
                     "is_blocked": int(clinic["is_blocked"]) if "is_blocked" in clinic.keys() and clinic["is_blocked"] else 0,
-                    "clinic": dict(clinic)
+                    "clinic": c_dict
                 }
 
     # Fallback para PIN legado (1234) ou Bearer 1234 (Clínica padrão 1)
@@ -637,6 +642,8 @@ def get_current_user(
         clinic = conn.execute("SELECT * FROM clinics WHERE id = 1").fetchone()
         user = conn.execute("SELECT * FROM users WHERE clinic_id = 1 LIMIT 1").fetchone()
         conn.close()
+        c_dict = dict(clinic) if clinic else {"id": 1, "name": "LaserGlow Clinic", "slug": "laserglow"}
+        c_dict["segment"] = resolve_clinic_segment(c_dict)
         return {
             "id": user["id"] if user else 1,
             "clinic_id": 1,
@@ -645,7 +652,7 @@ def get_current_user(
             "role": "owner",
             "is_superadmin": 1,
             "is_blocked": 0,
-            "clinic": dict(clinic) if clinic else {"id": 1, "name": "LaserGlow Clinic", "slug": "laserglow"}
+            "clinic": c_dict
         }
 
     raise HTTPException(status_code=401, detail="Sessão não autorizada ou expirada. Faça login.")
@@ -665,13 +672,28 @@ def verify_superadmin(current_user: dict = Depends(get_current_user)):
 
 # --- Funções Auxiliares de Clínica e Agenda ---
 
+def resolve_clinic_segment(clinic: dict) -> str:
+    seg = (clinic.get("segment") or "").strip().lower()
+    if seg in ("salao", "barbearia", "unhas", "laser"):
+        return seg
+    name_and_sub = ((clinic.get("name") or "") + " " + (clinic.get("subtitle") or "")).lower()
+    if any(w in name_and_sub for w in ["salao", "salão", "hair", "cabel", "beleza"]):
+        return "salao"
+    if any(w in name_and_sub for w in ["barba", "barbearia"]):
+        return "barbearia"
+    if any(w in name_and_sub for w in ["unha", "nail", "sobrancelha", "esmalte", "esmalteria"]):
+        return "unhas"
+    return "laser"
+
 def get_clinic_by_slug(slug: str):
     conn = get_db()
     c = conn.execute("SELECT * FROM clinics WHERE slug = ?", (slug,)).fetchone()
     conn.close()
     if not c:
         raise HTTPException(status_code=404, detail="Clínica não encontrada. Verifique o link de agendamento.")
-    return dict(c)
+    d = dict(c)
+    d["segment"] = resolve_clinic_segment(d)
+    return d
 
 def get_clinic_by_id(clinic_id: int):
     conn = get_db()
@@ -679,7 +701,9 @@ def get_clinic_by_id(clinic_id: int):
     conn.close()
     if not c:
         raise HTTPException(status_code=404, detail="Clínica não encontrada.")
-    return dict(c)
+    d = dict(c)
+    d["segment"] = resolve_clinic_segment(d)
+    return d
 
 def compute_available_slots(clinic: dict, date: str):
     conn = get_db()
@@ -973,9 +997,9 @@ def register_clinic(data: RegisterClinicRequest):
 
     trial_end = (datetime.datetime.now() + datetime.timedelta(days=15)).strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("""
-        INSERT INTO clinics (name, subtitle, slug, phone, plan, subscription_status, trial_ends_at)
-        VALUES (?, ?, ?, ?, 'trial', 'active', ?)
-    """, (clinic_name, subtitle, slug, data.phone or "", trial_end))
+        INSERT INTO clinics (name, subtitle, slug, phone, plan, subscription_status, trial_ends_at, segment)
+        VALUES (?, ?, ?, ?, 'trial', 'active', ?, ?)
+    """, (clinic_name, subtitle, slug, data.phone or "", trial_end, segment))
     clinic_id = cursor.lastrowid
 
     pwd_hash = hash_password(password)
@@ -1001,7 +1025,7 @@ def register_clinic(data: RegisterClinicRequest):
         "success": True,
         "token": token,
         "user": {"id": user_id, "name": owner_name, "email": email, "role": "owner"},
-        "clinic": {"id": clinic_id, "name": clinic_name, "slug": slug, "plan": "trial", "trial_ends_at": trial_end}
+        "clinic": {"id": clinic_id, "name": clinic_name, "slug": slug, "plan": "trial", "trial_ends_at": trial_end, "segment": segment}
     }
 
 @app.post("/api/auth/login")
@@ -1026,15 +1050,18 @@ def auth_login(data: LoginRequest):
             raise HTTPException(status_code=401, detail="Senha PIN incorreta.")
 
     email = (data.email or "").strip().lower()
+    if email in ("admin", "administrador", "root"):
+        email = "admin@laserglow.com"
+
     password = data.password or ""
     if not email or not password:
         conn.close()
-        raise HTTPException(status_code=400, detail="Informe o e-mail e a senha.")
+        raise HTTPException(status_code=400, detail="Informe o e-mail/usuário e a senha de acesso.")
 
     user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
     if not user:
         conn.close()
-        raise HTTPException(status_code=401, detail="E-mail ou senha incorretos.")
+        raise HTTPException(status_code=401, detail="Usuário ou senha incorretos.")
 
     if not verify_password(password, user["password_hash"]):
         conn.close()
