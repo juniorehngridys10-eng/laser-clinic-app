@@ -230,9 +230,28 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM users WHERE email = 'admin@laserglow.com'")
     if cursor.fetchone()[0] == 0:
         cursor.execute("""
-        INSERT INTO users (clinic_id, name, email, password_hash, role, is_superadmin)
-        VALUES (1, 'Administrador', 'admin@laserglow.com', ?, 'owner', 1)
+        INSERT INTO users (clinic_id, name, email, password_hash, plain_password, role, is_superadmin)
+        VALUES (1, 'Administrador', 'admin@laserglow.com', ?, '1234', 'owner', 1)
         """, (hash_password("1234"),))
+
+    # Migração segura: coluna plain_password na tabela users
+    cursor.execute("PRAGMA table_info(users);")
+    user_cols = [c[1] for c in cursor.fetchall()]
+    if "plain_password" not in user_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN plain_password TEXT DEFAULT '';")
+    cursor.execute("UPDATE users SET plain_password = '1234' WHERE id = 1 AND (plain_password IS NULL OR plain_password = '')")
+
+    # Tabela de Recuperação de Senhas (Esqueci Minha Senha)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT NOT NULL,
+        token TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        used INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
 
     # 3. Tabela de Serviços e Pacotes da Clínica
     cursor.execute("""
@@ -602,6 +621,16 @@ class ClinicRenewRequest(BaseModel):
 
 class ClinicExtendTrialRequest(BaseModel):
     days: Optional[int] = 7
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+class SuperadminChangePasswordRequest(BaseModel):
+    new_password: str
 
 # --- Dependência de Autenticação Multi-Tenant ---
 
@@ -1004,9 +1033,9 @@ def register_clinic(data: RegisterClinicRequest):
 
     pwd_hash = hash_password(password)
     cursor.execute("""
-        INSERT INTO users (clinic_id, name, email, password_hash, role, is_superadmin)
-        VALUES (?, ?, ?, ?, 'owner', 0)
-    """, (clinic_id, owner_name, email, pwd_hash))
+        INSERT INTO users (clinic_id, name, email, password_hash, plain_password, role, is_superadmin)
+        VALUES (?, ?, ?, ?, ?, 'owner', 0)
+    """, (clinic_id, owner_name, email, pwd_hash, password))
     user_id = cursor.lastrowid
     conn.commit()
     conn.close()
@@ -1084,6 +1113,114 @@ def auth_login(data: LoginRequest):
         "user": {"id": user["id"], "name": user["name"], "email": user["email"], "role": user["role"]},
         "clinic": dict(clinic) if clinic else {"id": user["clinic_id"], "name": "Clínica", "slug": "clinica"}
     }
+
+def send_email_recovery(to_email: str, token: str, client_name: str = "Cliente"):
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_port = int(os.environ.get("SMTP_PORT") or 587)
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_password = os.environ.get("SMTP_PASSWORD")
+    smtp_from = os.environ.get("SMTP_FROM") or smtp_user or "noreply@suaclinica.com"
+
+    subject = "Recuperação de Senha - Sistema de Gestão"
+    body = f"""Olá {client_name}!
+
+Você solicitou a recuperação de acesso ao seu painel.
+Seu código de verificação para redefinir sua senha é:
+
+{token}
+
+Acesse a tela de login e informe este código para cadastrar sua nova senha.
+Caso você não tenha solicitado esta alteração, desconsidere este e-mail.
+"""
+    if smtp_host and smtp_user and smtp_password:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            msg = MIMEText(body, "plain", "utf-8")
+            msg["Subject"] = subject
+            msg["From"] = smtp_from
+            msg["To"] = to_email
+
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_password)
+                server.send_message(msg)
+            return True
+        except Exception as e:
+            print(f"Erro ao enviar email via SMTP: {e}")
+            return False
+    return False
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(data: ForgotPasswordRequest):
+    email = data.email.strip().lower()
+    if email in ("admin", "administrador", "root"):
+        email = "admin@laserglow.com"
+
+    conn = get_db()
+    cursor = conn.cursor()
+    user = cursor.execute("SELECT id, name, email FROM users WHERE email = ?", (email,)).fetchone()
+    if not user:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Nenhum usuário cadastrado com este e-mail.")
+
+    # Código numérico de 6 dígitos
+    token = f"{secrets.randbelow(900000) + 100000}"
+    expires_at = (datetime.datetime.now() + datetime.timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute("""
+        INSERT INTO password_resets (email, token, expires_at, used)
+        VALUES (?, ?, ?, 0)
+    """, (email, token, expires_at))
+    conn.commit()
+    conn.close()
+
+    sent = send_email_recovery(email, token, user["name"])
+
+    return {
+        "success": True,
+        "message": f"Código de recuperação gerado para {email}.",
+        "email": email,
+        "email_sent": sent,
+        "code": token
+    }
+
+@app.post("/api/auth/reset-password")
+def reset_password(data: ResetPasswordRequest):
+    token = data.token.strip()
+    new_password = data.new_password.strip()
+
+    if len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter no mínimo 4 caracteres.")
+
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = get_db()
+    cursor = conn.cursor()
+
+    reset_record = cursor.execute("""
+        SELECT * FROM password_resets 
+        WHERE token = ? AND used = 0 AND expires_at >= ?
+        ORDER BY id DESC LIMIT 1
+    """, (token, now_str)).fetchone()
+
+    if not reset_record:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Código de recuperação inválido ou expirado. Solicite novamente.")
+
+    email = reset_record["email"]
+    pwd_hash = hash_password(new_password)
+
+    cursor.execute("""
+        UPDATE users 
+        SET password_hash = ?, plain_password = ?
+        WHERE email = ?
+    """, (pwd_hash, new_password, email))
+
+    cursor.execute("UPDATE password_resets SET used = 1 WHERE id = ?", (reset_record["id"],))
+    conn.commit()
+    conn.close()
+
+    return {"success": True, "message": "Senha redefinida com sucesso! Você já pode entrar com sua nova senha."}
 
 @app.get("/api/admin/me")
 def get_current_user_and_clinic(current_user: dict = Depends(get_current_user)):
@@ -1747,6 +1884,7 @@ def list_saas_clinics(admin: dict = Depends(verify_superadmin)):
         SELECT c.*, 
                u.name as owner_name, 
                u.email as owner_email,
+               u.plain_password as owner_password,
                (SELECT COUNT(*) FROM appointments a WHERE a.clinic_id = c.id) as appointments_count,
                (SELECT COUNT(*) FROM clients cl WHERE cl.clinic_id = c.id) as clients_count
         FROM clinics c
@@ -1921,6 +2059,40 @@ def unblock_clinic_access(clinic_id: int, admin: dict = Depends(verify_superadmi
     conn.commit()
     conn.close()
     return {"success": True, "message": "Acesso da clínica desbloqueado com sucesso!"}
+
+@app.post("/api/superadmin/clinics/{clinic_id}/change-password")
+def superadmin_change_clinic_password(clinic_id: int, req: SuperadminChangePasswordRequest, admin: dict = Depends(verify_superadmin)):
+    new_password = req.new_password.strip()
+    if len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter no mínimo 4 caracteres.")
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    user = cursor.execute("SELECT id, name, email FROM users WHERE clinic_id = ? AND role = 'owner' LIMIT 1", (clinic_id,)).fetchone()
+    if not user:
+        user = cursor.execute("SELECT id, name, email FROM users WHERE clinic_id = ? LIMIT 1", (clinic_id,)).fetchone()
+    
+    if not user:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Nenhum usuário gestor encontrado para este estabelecimento.")
+
+    pwd_hash = hash_password(new_password)
+    cursor.execute("""
+        UPDATE users 
+        SET password_hash = ?, plain_password = ?
+        WHERE id = ?
+    """, (pwd_hash, new_password, user["id"]))
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": f"Senha do usuário {user['email']} atualizada com sucesso para: {new_password}",
+        "clinic_id": clinic_id,
+        "email": user["email"],
+        "new_password": new_password
+    }
 
 # --- Rotas de Páginas HTML (Landing, Painel e Agendamento por Clínica) ---
 
