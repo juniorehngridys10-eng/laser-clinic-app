@@ -43,23 +43,25 @@
         <i class="fa-solid fa-check"></i>
       </div>
       <div>
-        <h2 class="text-2xl font-extrabold text-slate-900">Ficha Enviada & Assinada!</h2>
-        <p class="text-sm text-slate-600 mt-2 max-w-md mx-auto">
+        <h2 id="success-title" class="text-2xl font-extrabold text-slate-900">Ficha Enviada & Assinada!</h2>
+        <p id="success-desc" class="text-sm text-slate-600 mt-2 max-w-md mx-auto">
           Obrigado, <strong id="success-client-name" class="text-rose-600">Cliente</strong>! Seus dados cadastrais, histórico de anamnese e assinatura digital foram registrados com sucesso no sistema da clínica.
         </p>
       </div>
 
-      <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs text-slate-600 space-y-2 max-w-md mx-auto">
+      <div id="success-orientacoes-box" class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-left text-xs text-slate-600 space-y-2 max-w-md mx-auto">
         <div class="flex items-center gap-2 font-bold text-slate-800">
           <i class="fa-solid fa-shield-halved text-rose-500"></i> Segurança & Orientações:
         </div>
-        <p>• Suas informações médicas são confidenciais e protegidas.</p>
-        <p>• Lembre-se de raspar os pelos com lâmina 1 dia antes da sessão e não tomar sol nas áreas tratadas.</p>
-        <p>• Nossa equipe já tem acesso à sua ficha para o seu atendimento.</p>
+        <div id="success-orientacoes-text">
+          <p>• Suas informações médicas são confidenciais e protegidas.</p>
+          <p>• Lembre-se de raspar os pelos com lâmina 1 dia antes da sessão e não tomar sol nas áreas tratadas.</p>
+          <p>• Nossa equipe já tem acesso à sua ficha para o seu atendimento.</p>
+        </div>
       </div>
 
       <div class="pt-4 flex flex-col sm:flex-row justify-center gap-3">
-        <a href="/agendar" class="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-sm shadow-md shadow-pink-200 transition flex items-center justify-center gap-2">
+        <a id="btn-success-agendar" href="/agendar" class="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-sm shadow-md shadow-pink-200 transition flex items-center justify-center gap-2">
           <i class="fa-regular fa-calendar-check"></i> Agendar ou Ver Horários
         </a>
         <a id="success-whatsapp-btn" href="#" target="_blank" class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-200 transition flex items-center justify-center gap-2">
@@ -72,18 +74,18 @@
     <form id="form-client-ficha" onsubmit="submitClientFicha(event)" class="space-y-6">
       
       <!-- Banner Informativo -->
-      <div class="bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-purple-500/10 border border-rose-200 p-5 rounded-3xl space-y-2">
-        <div class="flex items-center gap-2 text-rose-700 font-bold text-sm">
+      <div id="banner-info" class="bg-gradient-to-r from-rose-500/10 via-pink-500/10 to-purple-500/10 border border-rose-200 p-5 rounded-3xl space-y-2">
+        <div id="banner-title" class="flex items-center gap-2 text-rose-700 font-bold text-sm">
           <i class="fa-solid fa-file-signature text-base"></i> Cadastro do Paciente & Avaliação Pré-Laser
         </div>
-        <p class="text-xs text-slate-600 leading-relaxed">
+        <p id="banner-desc" class="text-xs text-slate-600 leading-relaxed">
           Para sua segurança e melhor eficácia do procedimento, responda com sinceridade ao questionário abaixo. No final da página, você poderá <strong>assinar com o dedo na tela do seu celular</strong>.
         </p>
       </div>
 
       <!-- 1. DADOS PESSOAIS & CADASTRAIS -->
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+        <h3 id="section-1-title" class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
           <i class="fa-regular fa-id-card"></i> 1. Dados Pessoais & Cadastrais
         </h3>
 
@@ -173,8 +175,8 @@
         </div>
       </div>
 
-      <!-- 2. TIPO DE TRATAMENTO & ÁREAS A SEREM TRATADAS -->
-      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <!-- 2. TIPO DE TRATAMENTO & ÁREAS A SEREM TRATADAS (Exclusivo Estética / Laser) -->
+      <div id="section-medical-treatment" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
           <i class="fa-solid fa-bullseye"></i> 2. Tratamento & Áreas Desejadas
         </h3>
@@ -233,8 +235,8 @@
         </div>
       </div>
 
-      <!-- 3. HISTÓRICO DE PATOLOGIAS & SAÚDE -->
-      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <!-- 3. HISTÓRICO DE PATOLOGIAS & SAÚDE (Exclusivo Estética / Laser) -->
+      <div id="section-medical-patologias" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
           <i class="fa-solid fa-heart-pulse"></i> 3. Histórico de Saúde & Patologias
         </h3>
@@ -245,8 +247,8 @@
         </div>
       </div>
 
-      <!-- 4. QUESTIONÁRIO MÉDICO DETALHADO -->
-      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <!-- 4. QUESTIONÁRIO MÉDICO DETALHADO (Exclusivo Estética / Laser) -->
+      <div id="section-medical-perguntas" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
           <i class="fa-solid fa-stethoscope"></i> 4. Questionário Médico & Medicamentos
         </h3>
@@ -255,8 +257,8 @@
         </div>
       </div>
 
-      <!-- 5. REAÇÃO AO SOL / FOTOTIPO -->
-      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <!-- 5. REAÇÃO AO SOL / FOTOTIPO (Exclusivo Estética / Laser) -->
+      <div id="section-medical-sol" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
         <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
           <i class="fa-solid fa-sun"></i> 5. Reação da sua Pele ao Sol
         </h3>
@@ -283,15 +285,15 @@
       </div>
 
       <!-- 6. TERMO DE CONSENTIMENTO & ASSINATURA DIGITAL TOUCHSCREEN -->
-      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
-        <h3 class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
+      <div id="section-termo-assinatura" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+        <h3 id="section-termo-title" class="font-bold text-base text-slate-900 uppercase tracking-wider text-rose-600 flex items-center gap-2">
           <i class="fa-solid fa-signature"></i> 6. Termo de Consentimento & Assinatura Digital
         </h3>
 
         <!-- Texto Legal -->
         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600 leading-relaxed space-y-2">
-          <p class="font-semibold text-slate-800">Declaração de Veracidade e Consentimento Informado:</p>
-          <p>
+          <p id="termo-legal-label" class="font-semibold text-slate-800">Declaração de Veracidade e Consentimento Informado:</p>
+          <p id="termo-legal-text">
             "Declaro que todas as informações prestadas nesta ficha de avaliação e anamnese são verdadeiras e completas. Fui devidamente orientado(a) sobre o funcionamento da depilação a laser, suas indicações, contraindicações e cuidados necessários antes e após cada sessão (especialmente quanto à proteção solar e métodos de raspagem dos pelos). Comprometo-me a informar à clínica qualquer alteração de saúde, gravidez ou uso de novos medicamentos antes das próximas sessões."
           </p>
         </div>
@@ -329,8 +331,8 @@
 
         <!-- Botão de Envio -->
         <div class="pt-4 border-t border-slate-100">
-          <button type="submit" id="btn-submit-ficha" class="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold text-base shadow-xl shadow-pink-200 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2">
-            <i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada
+          <button type="submit" id="btn-submit-ficha" class="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold text-base shadow-xl shadow-pink-200 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-signature text-lg"></i> <span id="btn-submit-text">Finalizar Cadastro e Enviar Ficha Assinada</span>
           </button>
         </div>
 
@@ -530,6 +532,80 @@
       return urlParams.get('c') || urlParams.get('clinic') || null;
     }
 
+    let currentClinicSegment = 'laser';
+
+    function applySegmentCustomizations(segment, clinicName) {
+      currentClinicSegment = (segment || 'laser').toLowerCase();
+      const isNonMedical = currentClinicSegment === 'salao' || currentClinicSegment === 'barbearia' || currentClinicSegment === 'unhas';
+
+      if (isNonMedical) {
+        // Oculta completamente as seções médicas de laser
+        const secTreat = document.getElementById('section-medical-treatment');
+        const secPat = document.getElementById('section-medical-patologias');
+        const secPerg = document.getElementById('section-medical-perguntas');
+        const secSol = document.getElementById('section-medical-sol');
+
+        if (secTreat) secTreat.classList.add('hidden');
+        if (secPat) secPat.classList.add('hidden');
+        if (secPerg) secPerg.classList.add('hidden');
+        if (secSol) secSol.classList.add('hidden');
+
+        // Customização de Título e Subtítulo
+        document.title = `Cadastro & Assinatura - ${clinicName}`;
+        const subEl = document.getElementById('clinic-display-subtitle');
+        if (subEl) subEl.textContent = "Cadastro do Cliente & Termo de Atendimento";
+
+        // Banner do Topo
+        const bTitle = document.getElementById('banner-title');
+        const bDesc = document.getElementById('banner-desc');
+        if (bTitle) bTitle.innerHTML = '<i class="fa-solid fa-signature text-base"></i> Cadastro Rápido do Cliente & Assinatura Digital';
+        if (bDesc) bDesc.innerHTML = 'Preencha seus dados de contato para confirmar seu atendimento e <strong>assine digitalmente com o dedo na tela</strong>.';
+
+        // Seção 1
+        const s1Title = document.getElementById('section-1-title');
+        if (s1Title) s1Title.innerHTML = '<i class="fa-regular fa-id-card"></i> Dados Cadastrais do Cliente';
+
+        // Sexo padrão por segmento
+        if (currentClinicSegment === 'barbearia') {
+          const sexoEl = document.getElementById('fc-sexo');
+          if (sexoEl) sexoEl.value = 'M';
+        }
+
+        // Seção do Termo e Assinatura
+        const stTitle = document.getElementById('section-termo-title');
+        const tlLabel = document.getElementById('termo-legal-label');
+        const tlText = document.getElementById('termo-legal-text');
+        if (stTitle) stTitle.innerHTML = '<i class="fa-solid fa-signature"></i> Termo de Atendimento & Assinatura Digital';
+        if (tlLabel) tlLabel.textContent = "Termo de Ciência, Pontualidade & LGPD:";
+
+        let legalText = `"Declaro que as informações cadastrais prestadas são verdadeiras. Comprometo-me a comparecer pontualmente no horário agendado ou comunicar eventual cancelamento com no mínimo 2 horas de antecedência. Autorizo o contato via WhatsApp para envio de lembretes e confirmações de horário, bem como o tratamento dos meus dados exclusivamente para fins de gestão do meu atendimento, em total conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/18)."`;
+        if (currentClinicSegment === 'barbearia') {
+          legalText = `"Declaro que as informações cadastrais prestadas são verdadeiras. Comprometo-me a cumprir o horário marcado para atendimento ou avisar previamente em caso de imprevisto. Autorizo o envio de lembretes pelo WhatsApp e o armazenamento seguro dos meus dados cadastrais conforme a LGPD."`;
+        } else if (currentClinicSegment === 'unhas') {
+          legalText = `"Declaro que as informações cadastrais prestadas são verdadeiras. Comprometo-me a comparecer no horário agendado ou comunicar desmarcações com antecedência. Autorizo o envio de confirmações e avisos pelo WhatsApp e o tratamento de dados pessoais conforme a LGPD."`;
+        }
+        if (tlText) tlText.textContent = legalText;
+
+        // Botão de Envio
+        const btnText = document.getElementById('btn-submit-text');
+        if (btnText) btnText.textContent = "Concluir Cadastro & Assinar Digitalmente";
+
+        // Tela de Sucesso
+        const scTitle = document.getElementById('success-title');
+        const scDesc = document.getElementById('success-desc');
+        const scOri = document.getElementById('success-orientacoes-text');
+        if (scTitle) scTitle.textContent = "Cadastro Realizado & Assinado!";
+        if (scDesc) scDesc.innerHTML = `Obrigado, <strong id="success-client-name" class="text-rose-600">Cliente</strong>! Seus dados cadastrais e assinatura digital foram registrados com sucesso no sistema.`;
+        if (scOri) {
+          scOri.innerHTML = `
+            <p>• Seus dados cadastrais e assinatura foram salvos com segurança conforme a LGPD.</p>
+            <p>• Você receberá a confirmação e os lembretes do seu atendimento via WhatsApp.</p>
+            <p>• Nossa equipe já está pronta para te atender com todo cuidado!</p>
+          `;
+        }
+      }
+    }
+
     async function loadClinicSettings() {
       try {
         const slug = getClinicSlug();
@@ -553,9 +629,12 @@
         if (data.phone) {
           let clean = data.phone.replace(/\D/g, '');
           if (!clean.startsWith('55') && clean.length <= 11) clean = '55' + clean;
-          const msg = encodeURIComponent("Olá! Estou preenchendo a ficha cadastral e gostaria de tirar uma dúvida.");
+          const msg = encodeURIComponent("Olá! Estou preenchendo o cadastro e gostaria de tirar uma dúvida.");
           document.getElementById('clinic-whatsapp-link').href = `https://wa.me/${clean}?text=${msg}`;
           document.getElementById('success-whatsapp-btn').href = `https://wa.me/${clean}`;
+        }
+        if (data.segment) {
+          applySegmentCustomizations(data.segment, data.name || "Estabelecimento");
         }
       } catch (err) {
         console.error("Erro ao carregar dados da clínica", err);
@@ -631,31 +710,37 @@
         return;
       }
 
+      const isNonMedical = currentClinicSegment === 'salao' || currentClinicSegment === 'barbearia' || currentClinicSegment === 'unhas';
+
       const btn = document.getElementById('btn-submit-ficha');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Enviando e Registrando Ficha...`;
+      btn.innerHTML = isNonMedical 
+        ? `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Salvando Cadastro & Assinatura...`
+        : `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Enviando e Registrando Ficha...`;
 
       // Captura assinatura em formato DataURL
       const signatureDataUrl = canvas.toDataURL('image/png');
 
-      // Áreas selecionadas
-      const selectedAreas = Array.from(document.querySelectorAll('input[name="fc-area"]:checked')).map(cb => cb.value);
+      // Áreas selecionadas (apenas para estética/laser)
+      const selectedAreas = isNonMedical ? [] : Array.from(document.querySelectorAll('input[name="fc-area"]:checked')).map(cb => cb.value);
 
-      // Patologias selecionadas
-      const selectedPat = Array.from(document.querySelectorAll('input[name="fc-patologia"]:checked')).map(cb => cb.value);
+      // Patologias selecionadas (apenas para estética/laser)
+      const selectedPat = isNonMedical ? [] : Array.from(document.querySelectorAll('input[name="fc-patologia"]:checked')).map(cb => cb.value);
 
-      // Questionário Médico
+      // Questionário Médico (apenas para estética/laser)
       const questionario = {};
-      PERGUNTAS.forEach((perg, idx) => {
-        const respRadio = document.querySelector(`input[name="fc-perg-${idx}"]:checked`);
-        const resp = respRadio ? respRadio.value : "Não";
-        const espec = document.getElementById(`fc-espec-${idx}`) ? document.getElementById(`fc-espec-${idx}`).value.trim() : "";
-        questionario[perg] = { resposta: resp, especifique: espec };
-      });
+      if (!isNonMedical) {
+        PERGUNTAS.forEach((perg, idx) => {
+          const respRadio = document.querySelector(`input[name="fc-perg-${idx}"]:checked`);
+          const resp = respRadio ? respRadio.value : "Não";
+          const espec = document.getElementById(`fc-espec-${idx}`) ? document.getElementById(`fc-espec-${idx}`).value.trim() : "";
+          questionario[perg] = { resposta: resp, especifique: espec };
+        });
+      }
 
-      const tipoTrat = document.querySelector('input[name="fc-tipo-trat"]:checked')?.value || "Depilação";
-      const sol48 = document.querySelector('input[name="fc-sol48"]:checked')?.value || "Não";
-      const reacaoSol = document.querySelector('input[name="fc-reacao-sol"]:checked')?.value || "";
+      const tipoTrat = isNonMedical ? "Atendimento Geral" : (document.querySelector('input[name="fc-tipo-trat"]:checked')?.value || "Depilação");
+      const sol48 = isNonMedical ? "Não" : (document.querySelector('input[name="fc-sol48"]:checked')?.value || "Não");
+      const reacaoSol = isNonMedical ? "" : (document.querySelector('input[name="fc-reacao-sol"]:checked')?.value || "");
 
       const payload = {
         name: document.getElementById('fc-name').value.trim(),
@@ -694,9 +779,11 @@
 
         if (!res.ok) {
           const err = await res.json();
-          alert(err.detail || "Erro ao salvar ficha. Por favor, verifique os campos.");
+          alert(err.detail || "Erro ao salvar cadastro. Por favor, verifique os campos.");
           btn.disabled = false;
-          btn.innerHTML = `<i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada`;
+          btn.innerHTML = isNonMedical 
+            ? `<i class="fa-solid fa-signature text-lg"></i> Concluir Cadastro & Assinar Digitalmente`
+            : `<i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada`;
           return;
         }
 
@@ -706,12 +793,21 @@
         document.getElementById('form-client-ficha').classList.add('hidden');
         document.getElementById('success-client-name').textContent = data.name;
         document.getElementById('success-screen').classList.remove('hidden');
+        
+        // Ajusta botão de retorno para o link da própria clínica
+        if (slug) {
+          const btnAg = document.getElementById('btn-success-agendar');
+          if (btnAg) btnAg.href = `/c/${slug}/agendar`;
+        }
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
       } catch (err) {
         alert("Erro na conexão com o servidor. Tente novamente.");
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada`;
+        btn.innerHTML = isNonMedical 
+          ? `<i class="fa-solid fa-signature text-lg"></i> Concluir Cadastro & Assinar Digitalmente`
+          : `<i class="fa-solid fa-check-double text-lg"></i> Finalizar Cadastro e Enviar Ficha Assinada`;
       }
     }
   </script>
