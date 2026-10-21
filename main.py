@@ -320,6 +320,10 @@ def init_db():
     app_cols = [c[1] for c in cursor.fetchall()]
     if "clinic_id" not in app_cols:
         cursor.execute("ALTER TABLE appointments ADD COLUMN clinic_id INTEGER DEFAULT 1;")
+    if "specialist_id" not in app_cols:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN specialist_id INTEGER;")
+    if "cabin_id" not in app_cols:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN cabin_id INTEGER;")
 
     # 6. Tabela de Controle de Pacotes Vendidos aos Clientes
     cursor.execute("""
@@ -403,6 +407,51 @@ def init_db():
         cursor.execute("ALTER TABLE anamnese_forms ADD COLUMN clinic_id INTEGER DEFAULT 1;")
     if "signature_image" not in af_cols:
         cursor.execute("ALTER TABLE anamnese_forms ADD COLUMN signature_image TEXT;")
+
+    # 9. Tabela de Especialistas / Profissionais da Clínica
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS specialists (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
+        name TEXT NOT NULL,
+        specialty TEXT DEFAULT 'Especialista',
+        phone TEXT DEFAULT '',
+        email TEXT DEFAULT '',
+        color TEXT DEFAULT '#f43f5e',
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (clinic_id) REFERENCES clinics (id)
+    );
+    """)
+
+    # 10. Tabela de Cabines / Salas de Atendimento
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS cabins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        clinic_id INTEGER DEFAULT 1,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (clinic_id) REFERENCES clinics (id)
+    );
+    """)
+
+    # Seed padrão de especialistas e cabines para clínica 1 se vazia
+    cursor.execute("SELECT COUNT(*) FROM specialists WHERE clinic_id = 1")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+        INSERT INTO specialists (clinic_id, name, specialty, phone, color, is_active)
+        VALUES (1, 'Dra. Especialista Principal', 'Laser & Estética Avançada', '', '#f43f5e', 1)
+        """)
+
+    cursor.execute("SELECT COUNT(*) FROM cabins WHERE clinic_id = 1")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+        INSERT INTO cabins (clinic_id, name, description, is_active)
+        VALUES (1, 'Cabine 1 - Principal', 'Sala com equipamento laser e maca regulável', 1),
+               (1, 'Cabine 2 - Estética Facial', 'Sala equipada com vapor de ozônio e lupa', 1)
+        """)
 
     # Procedimentos padrão se clínica 1 estiver vazia
     cursor.execute("SELECT COUNT(*) FROM services WHERE clinic_id = 1")
@@ -489,6 +538,25 @@ class BookingRequest(BaseModel):
     appointment_date: str
     appointment_time: str
     notes: Optional[str] = None
+    specialist_id: Optional[int] = None
+    cabin_id: Optional[int] = None
+
+class SpecialistCreateOrUpdate(BaseModel):
+    name: str
+    specialty: Optional[str] = "Especialista"
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    color: Optional[str] = "#f43f5e"
+    is_active: Optional[int] = 1
+
+class CabinCreateOrUpdate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    is_active: Optional[int] = 1
+
+class AppointmentAssignRequest(BaseModel):
+    specialist_id: Optional[int] = None
+    cabin_id: Optional[int] = None
 
 class RescheduleRequest(BaseModel):
     appointment_date: str
@@ -856,9 +924,9 @@ def process_booking(clinic_id: int, data: BookingRequest):
         client_id = cursor.lastrowid
 
     cursor.execute("""
-        INSERT INTO appointments (clinic_id, client_id, service_id, appointment_date, appointment_time, status, notes)
-        VALUES (?, ?, ?, ?, ?, 'agendado', ?)
-    """, (clinic_id, client_id, data.service_id, data.appointment_date, data.appointment_time, data.notes or ""))
+        INSERT INTO appointments (clinic_id, client_id, service_id, appointment_date, appointment_time, status, notes, specialist_id, cabin_id)
+        VALUES (?, ?, ?, ?, ?, 'agendado', ?, ?, ?)
+    """, (clinic_id, client_id, data.service_id, data.appointment_date, data.appointment_time, data.notes or "", data.specialist_id, data.cabin_id))
 
     app_id = cursor.lastrowid
     conn.commit()
@@ -1041,6 +1109,14 @@ def register_clinic(data: RegisterClinicRequest):
     conn.close()
 
     seed_default_services_for_clinic(clinic_id, segment=segment)
+
+    conn = get_db()
+    conn.execute("INSERT INTO specialists (clinic_id, name, specialty, phone, is_active) VALUES (?, ?, 'Especialista Principal', ?, 1)",
+                 (clinic_id, owner_name, data.phone or ""))
+    conn.execute("INSERT INTO cabins (clinic_id, name, description, is_active) VALUES (?, 'Cabine 1', 'Sala Principal de Atendimento', 1)",
+                 (clinic_id,))
+    conn.commit()
+    conn.close()
 
     token = create_token({
         "user_id": user_id,
@@ -1403,21 +1479,29 @@ async def upload_logo(file: UploadFile = File(...), admin: dict = Depends(verify
     return {"success": True, "logo_url": logo_url}
 
 @app.get("/api/appointments")
-def list_appointments(date: Optional[str] = None, status: Optional[str] = None, admin: dict = Depends(verify_admin)):
+def list_appointments(date: Optional[str] = None, month: Optional[str] = None, status: Optional[str] = None, admin: dict = Depends(verify_admin)):
     conn = get_db()
     query = """
         SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.notes, a.created_at,
+               a.specialist_id, a.cabin_id,
                c.id as client_id, c.name as client_name, c.phone as client_phone, c.email as client_email,
-               s.id as service_id, s.name as service_name, s.category as service_category, s.price as service_price, s.duration_minutes
+               s.id as service_id, s.name as service_name, s.category as service_category, s.price as service_price, s.duration_minutes,
+               sp.name as specialist_name, sp.specialty as specialist_specialty, sp.color as specialist_color,
+               cb.name as cabin_name
         FROM appointments a
         JOIN clients c ON a.client_id = c.id
         JOIN services s ON a.service_id = s.id
+        LEFT JOIN specialists sp ON a.specialist_id = sp.id
+        LEFT JOIN cabins cb ON a.cabin_id = cb.id
         WHERE a.clinic_id = ?
     """
     params = [admin["clinic_id"]]
     if date:
         query += " AND a.appointment_date = ?"
         params.append(date)
+    elif month:
+        query += " AND a.appointment_date LIKE ?"
+        params.append(f"{month}%")
     if status and status != 'todos':
         query += " AND a.status = ?"
         params.append(status)
@@ -1426,6 +1510,18 @@ def list_appointments(date: Optional[str] = None, status: Optional[str] = None, 
     rows = conn.execute(query, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+@app.put("/api/appointments/{app_id}/assign")
+def assign_appointment(app_id: int, req: AppointmentAssignRequest, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    conn.execute("""
+        UPDATE appointments 
+        SET specialist_id = ?, cabin_id = ?
+        WHERE id = ? AND clinic_id = ?
+    """, (req.specialist_id, req.cabin_id, app_id, admin["clinic_id"]))
+    conn.commit()
+    conn.close()
+    return {"success": True, "app_id": app_id, "specialist_id": req.specialist_id, "cabin_id": req.cabin_id}
 
 # --- Gestão de Clientes do Tenant ---
 @app.get("/api/clients")
@@ -1846,6 +1942,136 @@ def delete_service(service_id: int, admin: dict = Depends(verify_admin)):
     conn.commit()
     conn.close()
     return {"success": True, "id": service_id}
+
+# --- Gestão de Especialistas / Profissionais da Clínica ---
+
+@app.get("/api/admin/specialists")
+def list_specialists(admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic_id = admin["clinic_id"]
+    rows = conn.execute("""
+        SELECT sp.*,
+               (SELECT COUNT(*) FROM appointments a WHERE a.specialist_id = sp.id AND a.clinic_id = sp.clinic_id) as appointments_count
+        FROM specialists sp
+        WHERE sp.clinic_id = ?
+        ORDER BY sp.is_active DESC, sp.name ASC
+    """, (clinic_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/admin/specialists")
+def create_specialist(data: SpecialistCreateOrUpdate, admin: dict = Depends(verify_admin)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="O nome do especialista / profissional é obrigatório.")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO specialists (clinic_id, name, specialty, phone, email, color, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (admin["clinic_id"], name, data.specialty or "Especialista", data.phone or "", data.email or "", data.color or "#f43f5e", data.is_active if data.is_active is not None else 1))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": new_id, "name": name}
+
+@app.put("/api/admin/specialists/{spec_id}")
+def update_specialist(spec_id: int, data: SpecialistCreateOrUpdate, admin: dict = Depends(verify_admin)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="O nome do especialista / profissional é obrigatório.")
+    conn = get_db()
+    conn.execute("""
+        UPDATE specialists
+        SET name = ?, specialty = ?, phone = ?, email = ?, color = ?, is_active = ?
+        WHERE id = ? AND clinic_id = ?
+    """, (name, data.specialty or "Especialista", data.phone or "", data.email or "", data.color or "#f43f5e", data.is_active if data.is_active is not None else 1, spec_id, admin["clinic_id"]))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": spec_id, "name": name}
+
+@app.delete("/api/admin/specialists/{spec_id}")
+def delete_specialist(spec_id: int, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    conn.execute("DELETE FROM specialists WHERE id = ? AND clinic_id = ?", (spec_id, admin["clinic_id"]))
+    conn.execute("UPDATE appointments SET specialist_id = NULL WHERE specialist_id = ? AND clinic_id = ?", (spec_id, admin["clinic_id"]))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": spec_id}
+
+# --- Gestão de Cabines / Salas de Atendimento ---
+
+@app.get("/api/admin/cabins")
+def list_cabins(admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    clinic_id = admin["clinic_id"]
+    rows = conn.execute("""
+        SELECT cb.*,
+               (SELECT COUNT(*) FROM appointments a WHERE a.cabin_id = cb.id AND a.clinic_id = cb.clinic_id) as appointments_count
+        FROM cabins cb
+        WHERE cb.clinic_id = ?
+        ORDER BY cb.is_active DESC, cb.name ASC
+    """, (clinic_id,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.post("/api/admin/cabins")
+def create_cabin(data: CabinCreateOrUpdate, admin: dict = Depends(verify_admin)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="O nome da cabine / sala é obrigatório.")
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO cabins (clinic_id, name, description, is_active)
+        VALUES (?, ?, ?, ?)
+    """, (admin["clinic_id"], name, data.description or "", data.is_active if data.is_active is not None else 1))
+    new_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": new_id, "name": name}
+
+@app.put("/api/admin/cabins/{cabin_id}")
+def update_cabin(cabin_id: int, data: CabinCreateOrUpdate, admin: dict = Depends(verify_admin)):
+    name = data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="O nome da cabine / sala é obrigatório.")
+    conn = get_db()
+    conn.execute("""
+        UPDATE cabins
+        SET name = ?, description = ?, is_active = ?
+        WHERE id = ? AND clinic_id = ?
+    """, (name, data.description or "", data.is_active if data.is_active is not None else 1, cabin_id, admin["clinic_id"]))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": cabin_id, "name": name}
+
+@app.delete("/api/admin/cabins/{cabin_id}")
+def delete_cabin(cabin_id: int, admin: dict = Depends(verify_admin)):
+    conn = get_db()
+    conn.execute("DELETE FROM cabins WHERE id = ? AND clinic_id = ?", (cabin_id, admin["clinic_id"]))
+    conn.execute("UPDATE appointments SET cabin_id = NULL WHERE cabin_id = ? AND clinic_id = ?", (cabin_id, admin["clinic_id"]))
+    conn.commit()
+    conn.close()
+    return {"success": True, "id": cabin_id}
+
+# --- Endpoints Públicos de Especialistas e Cabines ---
+
+@app.get("/api/public/{slug}/specialists")
+def public_list_specialists(slug: str):
+    clinic = get_clinic_by_slug(slug)
+    conn = get_db()
+    rows = conn.execute("SELECT id, name, specialty, color FROM specialists WHERE clinic_id = ? AND is_active = 1 ORDER BY name ASC", (clinic["id"],)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+@app.get("/api/public/{slug}/cabins")
+def public_list_cabins(slug: str):
+    clinic = get_clinic_by_slug(slug)
+    conn = get_db()
+    rows = conn.execute("SELECT id, name, description FROM cabins WHERE clinic_id = ? AND is_active = 1 ORDER BY name ASC", (clinic["id"],)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 # --- Endpoints de Gestão Master SaaS (SuperAdmin) ---
 
