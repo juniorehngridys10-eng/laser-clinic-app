@@ -179,6 +179,14 @@
           <i class="fa-regular fa-calendar-days text-rose-500 w-4 text-center"></i>
           <span>Atendimentos</span>
         </button>
+        <button id="tab-btn-specialists" onclick="switchTab('specialists')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-user-doctor text-pink-500 w-4 text-center"></i>
+          <span>Especialistas</span>
+        </button>
+        <button id="tab-btn-cabins" onclick="switchTab('cabins')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
+          <i class="fa-solid fa-door-open text-amber-500 w-4 text-center"></i>
+          <span>Cabines & Salas</span>
+        </button>
         <button id="tab-btn-clients" onclick="switchTab('clients')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 text-left transition cursor-pointer">
           <i class="fa-solid fa-users text-purple-500 w-4 text-center"></i>
           <span>Clientes & Fichas</span>
@@ -366,16 +374,47 @@
 
     <!-- SEÇÃO 1: ATENDIMENTOS -->
     <section id="section-appointments" class="space-y-4">
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500">Filtrar por data:</span>
-            <input type="date" id="filter-date" class="text-sm px-3 py-1.5 border border-slate-300 rounded-xl bg-white font-medium focus:ring-rose-500 focus:outline-none">
+      <!-- BARRA DE SELEÇÃO DE VISUALIZAÇÃO E FILTROS -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          
+          <!-- SELETOR DE MODO DE VISUALIZAÇÃO: FUNIL / CALENDÁRIO / TABELA -->
+          <div class="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200 self-start lg:self-auto shadow-inner">
+            <button type="button" id="btn-view-kanban" onclick="switchAppointmentsView('kanban')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer bg-white text-rose-600 shadow-xs">
+              <i class="fa-solid fa-table-columns"></i>
+              <span>Funil Kanban (Trello)</span>
+            </button>
+            <button type="button" id="btn-view-calendar" onclick="switchAppointmentsView('calendar')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900">
+              <i class="fa-solid fa-calendar-days"></i>
+              <span>Calendário do Mês</span>
+            </button>
+            <button type="button" id="btn-view-table" onclick="switchAppointmentsView('table')" class="px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900">
+              <i class="fa-solid fa-list-ul"></i>
+              <span>Lista / Tabela</span>
+            </button>
           </div>
 
+          <!-- AÇÕES GERAIS (IMPRIMIR / ATUALIZAR) -->
+          <div class="flex items-center gap-2 self-start lg:self-auto">
+            <button onclick="quickPrintReport('appointments')" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2 rounded-xl font-semibold transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-print"></i> Imprimir Agenda
+            </button>
+            <button onclick="loadAppointments()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl font-medium transition flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-rotate"></i> Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTROS SECUNDÁRIOS -->
+        <div class="flex flex-wrap items-center gap-3 pt-2.5 border-t border-slate-100 text-xs">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500">Status:</span>
-            <select id="filter-status" class="text-sm px-3 py-1.5 border border-slate-300 rounded-xl bg-white font-medium focus:ring-rose-500 focus:outline-none">
+            <span class="font-semibold text-slate-500">Data:</span>
+            <input type="date" id="filter-date" onchange="loadAppointments()" class="px-3 py-1.5 border border-slate-300 rounded-xl bg-white font-medium focus:ring-rose-500 focus:outline-none">
+          </div>
+
+          <div class="flex items-center gap-2" id="filter-status-container">
+            <span class="font-semibold text-slate-500">Status:</span>
+            <select id="filter-status" onchange="loadAppointments()" class="px-3 py-1.5 border border-slate-300 rounded-xl bg-white font-medium focus:ring-rose-500 focus:outline-none">
               <option value="todos">Todos os status</option>
               <option value="agendado">Agendado</option>
               <option value="confirmado">Confirmado</option>
@@ -384,15 +423,185 @@
             </select>
           </div>
 
-          <button onclick="clearFilters()" class="text-xs text-rose-600 hover:underline font-medium">Limpar Filtros</button>
+          <div class="relative flex-1 min-w-[200px] max-w-xs">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="filter-app-search" onkeyup="filterAppointmentsView()" placeholder="Buscar cliente, tel ou serviço..." class="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded-xl bg-white focus:ring-rose-500 focus:outline-none">
+          </div>
+
+          <button onclick="clearFilters()" class="text-rose-600 hover:underline font-medium cursor-pointer">Limpar Filtros</button>
+        </div>
+      </div>
+
+      <!-- 1. VISUALIZAÇÃO EM FUNIL KANBAN (TIPO TRELLO) -->
+      <div id="appointments-view-kanban" class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+          
+          <!-- COLUNA 1: AGENDADOS -->
+          <div class="bg-amber-50/40 rounded-2xl p-3.5 border border-amber-200/80 flex flex-col min-h-[520px] transition"
+               ondragover="handleKanbanDragOver(event)" ondrop="handleKanbanDrop(event, 'agendado')">
+            <div class="flex items-center justify-between pb-3 mb-2.5 border-b border-amber-200/80">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <h4 class="font-extrabold text-xs uppercase tracking-wider text-amber-900">1. Agendados</h4>
+              </div>
+              <span id="kanban-count-agendado" class="text-xs font-black px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">0</span>
+            </div>
+            <div id="kanban-col-agendado" class="space-y-3 flex-1 overflow-y-auto max-h-[75vh] pr-1">
+              <!-- Cards dinâmicos -->
+            </div>
+          </div>
+
+          <!-- COLUNA 2: CONFIRMADOS -->
+          <div class="bg-blue-50/40 rounded-2xl p-3.5 border border-blue-200/80 flex flex-col min-h-[520px] transition"
+               ondragover="handleKanbanDragOver(event)" ondrop="handleKanbanDrop(event, 'confirmado')">
+            <div class="flex items-center justify-between pb-3 mb-2.5 border-b border-blue-200/80">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                <h4 class="font-extrabold text-xs uppercase tracking-wider text-blue-900">2. Confirmados</h4>
+              </div>
+              <span id="kanban-count-confirmado" class="text-xs font-black px-2 py-0.5 rounded-full bg-blue-200 text-blue-900">0</span>
+            </div>
+            <div id="kanban-col-confirmado" class="space-y-3 flex-1 overflow-y-auto max-h-[75vh] pr-1">
+              <!-- Cards dinâmicos -->
+            </div>
+          </div>
+
+          <!-- COLUNA 3: CONCLUÍDOS -->
+          <div class="bg-emerald-50/40 rounded-2xl p-3.5 border border-emerald-200/80 flex flex-col min-h-[520px] transition"
+               ondragover="handleKanbanDragOver(event)" ondrop="handleKanbanDrop(event, 'concluido')">
+            <div class="flex items-center justify-between pb-3 mb-2.5 border-b border-emerald-200/80">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <h4 class="font-extrabold text-xs uppercase tracking-wider text-emerald-900">3. Concluídos</h4>
+              </div>
+              <span id="kanban-count-concluido" class="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">0</span>
+            </div>
+            <div id="kanban-col-concluido" class="space-y-3 flex-1 overflow-y-auto max-h-[75vh] pr-1">
+              <!-- Cards dinâmicos -->
+            </div>
+          </div>
+
+          <!-- COLUNA 4: CANCELADOS / NO-SHOW -->
+          <div class="bg-rose-50/40 rounded-2xl p-3.5 border border-rose-200/80 flex flex-col min-h-[520px] transition"
+               ondragover="handleKanbanDragOver(event)" ondrop="handleKanbanDrop(event, 'cancelado')">
+            <div class="flex items-center justify-between pb-3 mb-2.5 border-b border-rose-200/80">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <h4 class="font-extrabold text-xs uppercase tracking-wider text-rose-900">4. Cancelados</h4>
+              </div>
+              <span id="kanban-count-cancelado" class="text-xs font-black px-2 py-0.5 rounded-full bg-rose-200 text-rose-900">0</span>
+            </div>
+            <div id="kanban-col-cancelado" class="space-y-3 flex-1 overflow-y-auto max-h-[75vh] pr-1">
+              <!-- Cards dinâmicos -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 2. VISUALIZAÇÃO EM CALENDÁRIO DO MÊS -->
+      <div id="appointments-view-calendar" class="space-y-4 hidden">
+        <!-- CABEÇALHO DO CALENDÁRIO COM NAVEGAÇÃO -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="changeCalendarMonth(-1)" class="w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 flex items-center justify-center transition cursor-pointer" title="Mês Anterior">
+              <i class="fa-solid fa-chevron-left text-xs"></i>
+            </button>
+            <h3 id="calendar-month-title" class="font-extrabold text-base sm:text-lg text-slate-900 min-w-[200px] text-center">
+              --
+            </h3>
+            <button type="button" onclick="changeCalendarMonth(1)" class="w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 flex items-center justify-center transition cursor-pointer" title="Próximo Mês">
+              <i class="fa-solid fa-chevron-right text-xs"></i>
+            </button>
+            <button type="button" onclick="goToCalendarToday()" class="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-bold transition cursor-pointer ml-1">
+              Hoje
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3 text-xs">
+            <span id="calendar-total-month-count" class="font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl">-- atendimentos no mês</span>
+            <span class="text-slate-400 hidden sm:inline">•</span>
+            <span class="text-slate-500 text-[11px]"><i class="fa-solid fa-arrow-pointer text-rose-500 mr-1"></i>Clique no dia para abrir os clientes</span>
+          </div>
         </div>
 
+        <!-- GRID DO CALENDÁRIO -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- DIAS DA SEMANA -->
+          <div class="grid grid-cols-7 bg-slate-50 border-b border-slate-200 text-center py-2.5 text-xs font-bold text-slate-600 uppercase tracking-wider">
+            <div>Dom</div>
+            <div>Seg</div>
+            <div>Ter</div>
+            <div>Qua</div>
+            <div>Qui</div>
+            <div>Sex</div>
+            <div>Sáb</div>
+          </div>
+          <!-- CÉLULAS DOS DIAS DO MÊS -->
+          <div id="calendar-days-grid" class="grid grid-cols-7 divide-x divide-y divide-slate-100 text-xs min-h-[440px]">
+            <!-- Preenchido via JavaScript -->
+          </div>
+        </div>
+
+        <!-- PAINEL DE CLIENTES DO DIA CLICADO -->
+        <div id="calendar-day-details-panel" class="bg-white p-5 rounded-2xl border-2 border-rose-200/80 shadow-md space-y-3.5 transition">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+            <div>
+              <h4 id="calendar-day-details-title" class="font-extrabold text-base text-slate-900 flex items-center gap-2">
+                <i class="fa-regular fa-calendar-check text-rose-500 text-lg"></i>
+                <span id="calendar-selected-day-label">Clientes Agendados</span>
+              </h4>
+              <p id="calendar-selected-day-sub" class="text-xs text-slate-500">Selecione qualquer dia no calendário acima para visualizar e gerenciar os agendamentos</p>
+            </div>
+            <div id="calendar-selected-day-badge"></div>
+          </div>
+
+          <!-- LISTA DOS CLIENTES DO DIA SELECIONADO -->
+          <div id="calendar-day-appointments-list" class="space-y-2.5">
+            <!-- Cards dos atendimentos do dia -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. VISUALIZAÇÃO EM LISTA / TABELA -->
+      <div id="appointments-view-table" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+              <tr>
+                <th class="py-3.5 px-4">Data & Horário</th>
+                <th class="py-3.5 px-4">Cliente</th>
+                <th class="py-3.5 px-4">Procedimento / Pacote</th>
+                <th class="py-3.5 px-4">Especialista & Cabine</th>
+                <th class="py-3.5 px-4">Status</th>
+                <th class="py-3.5 px-4 text-center">Avisar WhatsApp Web</th>
+                <th class="py-3.5 px-4 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="appointments-tbody" class="divide-y divide-slate-100 text-slate-700">
+              <tr>
+                <td colspan="7" class="text-center py-8 text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando atendimentos...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: ESPECIALISTAS & PROFISSIONAIS -->
+    <section id="section-specialists" class="space-y-4 hidden">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex-1 max-w-md">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="search-specialist" onkeyup="filterSpecialistsTable()" placeholder="Buscar especialista por nome ou especialidade..." class="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+        </div>
         <div class="flex items-center gap-2 self-start md:self-auto">
-          <button onclick="quickPrintReport('appointments')" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-2 rounded-xl font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-print"></i> Imprimir Agenda
-          </button>
-          <button onclick="loadAppointments()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-xl font-medium transition flex items-center gap-1.5">
-            <i class="fa-solid fa-rotate"></i> Atualizar Lista
+          <button onclick="openSpecialistModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold text-sm shadow-md shadow-pink-200 transition flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-user-plus"></i> Novo Especialista
           </button>
         </div>
       </div>
@@ -402,18 +611,57 @@
           <table class="w-full text-left text-sm">
             <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
               <tr>
-                <th class="py-3.5 px-4">Data & Horário</th>
-                <th class="py-3.5 px-4">Cliente</th>
-                <th class="py-3.5 px-4">Procedimento / Pacote</th>
+                <th class="py-3.5 px-4">Profissional</th>
+                <th class="py-3.5 px-4">Especialidade / Cargo</th>
+                <th class="py-3.5 px-4">WhatsApp / Contato</th>
+                <th class="py-3.5 px-4">Cor na Agenda</th>
                 <th class="py-3.5 px-4">Status</th>
-                <th class="py-3.5 px-4 text-center">Avisar WhatsApp Web</th>
+                <th class="py-3.5 px-4">Atendimentos</th>
                 <th class="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody id="appointments-tbody" class="divide-y divide-slate-100 text-slate-700">
+            <tbody id="specialists-tbody" class="divide-y divide-slate-100 text-slate-700">
               <tr>
-                <td colspan="6" class="text-center py-8 text-slate-400">
-                  <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando atendimentos...
+                <td colspan="7" class="text-center py-8 text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando especialistas...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEÇÃO: CABINES & SALAS DE ATENDIMENTO -->
+    <section id="section-cabins" class="space-y-4 hidden">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h3 class="font-extrabold text-base text-slate-900">Salas & Cabines de Atendimento</h3>
+          <p class="text-xs text-slate-500">Cadastre os espaços físicos (cabines de laser, salas de estética, cadeiras, macas) para organizar o fluxo de clientes.</p>
+        </div>
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <button onclick="openCabinModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-sm shadow-md shadow-amber-200 transition flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-plus"></i> Nova Cabine / Sala
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs uppercase font-semibold">
+              <tr>
+                <th class="py-3.5 px-4">Nome da Cabine / Sala</th>
+                <th class="py-3.5 px-4">Descrição / Equipamento</th>
+                <th class="py-3.5 px-4">Status</th>
+                <th class="py-3.5 px-4">Total Atendimentos</th>
+                <th class="py-3.5 px-4 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="cabins-tbody" class="divide-y divide-slate-100 text-slate-700">
+              <tr>
+                <td colspan="5" class="text-center py-8 text-slate-400">
+                  <i class="fa-solid fa-spinner fa-spin mr-2"></i> Carregando cabines...
                 </td>
               </tr>
             </tbody>
@@ -1138,6 +1386,180 @@
     </section>
 
   </main>
+  </div>
+
+  <!-- MODAL: CADASTRAR / EDITAR ESPECIALISTA -->
+  <div id="modal-specialist" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-scale">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-md shadow-rose-200">
+            <i class="fa-solid fa-user-doctor"></i>
+          </div>
+          <div>
+            <h3 id="modal-specialist-title" class="font-extrabold text-base text-slate-900">Novo Especialista</h3>
+            <p class="text-xs text-slate-400">Cadastre o profissional para vincular aos atendimentos</p>
+          </div>
+        </div>
+        <button onclick="closeSpecialistModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-specialist" onsubmit="submitSpecialist(event)" class="space-y-3.5">
+        <input type="hidden" id="specialist-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome Completo do Especialista *</label>
+          <input type="text" id="specialist-name" required placeholder="Ex: Dra. Mariana Silva" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Especialidade / Cargo *</label>
+          <input type="text" id="specialist-specialty" required placeholder="Ex: Biomédica Esteta, Laserterapeuta, Barbeiro..." class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp / Telefone</label>
+            <input type="text" id="specialist-phone" placeholder="11999999999" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Cor na Agenda</label>
+            <div class="flex items-center gap-2">
+              <input type="color" id="specialist-color" value="#f43f5e" class="w-10 h-9 p-0.5 border border-slate-300 rounded-xl cursor-pointer">
+              <span class="text-xs text-slate-500">Identificação</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">E-mail (Opcional)</label>
+          <input type="email" id="specialist-email" placeholder="mariana@clinica.com" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-rose-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Status de Atendimento</label>
+          <select id="specialist-active" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:ring-rose-500 focus:outline-none font-medium">
+            <option value="1">🟢 Ativo (Recebendo agendamentos)</option>
+            <option value="0">⚪ Inativo (Pausado)</option>
+          </select>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <button type="button" onclick="closeSpecialistModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-save-specialist" class="px-5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-bold text-xs shadow-md shadow-pink-200 transition cursor-pointer">
+            Salvar Especialista
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CADASTRAR / EDITAR CABINE / SALA -->
+  <div id="modal-cabin" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-scale">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-lg shadow-md shadow-amber-200">
+            <i class="fa-solid fa-door-open"></i>
+          </div>
+          <div>
+            <h3 id="modal-cabin-title" class="font-extrabold text-base text-slate-900">Nova Cabine / Sala</h3>
+            <p class="text-xs text-slate-400">Identifique os espaços e salas da clínica</p>
+          </div>
+        </div>
+        <button onclick="closeCabinModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-cabin" onsubmit="submitCabin(event)" class="space-y-3.5">
+        <input type="hidden" id="cabin-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nome da Cabine / Sala *</label>
+          <input type="text" id="cabin-name" required placeholder="Ex: Cabine Laser 1, Sala VIP, Cadeira 2..." class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-amber-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Descrição / Equipamento Instalado</label>
+          <textarea id="cabin-description" rows="2" placeholder="Ex: Aparelho Soprano Titanium, maca articulada e ar condicionado..." class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-amber-500 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Disponibilidade</label>
+          <select id="cabin-active" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl bg-white focus:ring-amber-500 focus:outline-none font-medium">
+            <option value="1">🟢 Ativa e Liberada</option>
+            <option value="0">⚪ Em Manutenção / Inativa</option>
+          </select>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <button type="button" onclick="closeCabinModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-save-cabin" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-md shadow-amber-200 transition cursor-pointer">
+            Salvar Cabine
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ATRIBUIR / VINCULAR ESPECIALISTA E CABINE AO ATENDIMENTO -->
+  <div id="modal-assign-appointment" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-scale">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center text-lg shadow-md shadow-indigo-200">
+            <i class="fa-solid fa-handshake-angle"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900">Vincular Profissional & Sala</h3>
+            <p class="text-xs text-slate-400">Direcione o atendimento para a cabine e especialista</p>
+          </div>
+        </div>
+        <button onclick="closeAssignModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs space-y-1">
+        <p><strong class="text-slate-500">Cliente:</strong> <span id="assign-client-name" class="font-bold text-slate-800">--</span></p>
+        <p><strong class="text-slate-500">Procedimento:</strong> <span id="assign-service-name" class="font-semibold text-rose-600">--</span></p>
+        <p><strong class="text-slate-500">Horário:</strong> <span id="assign-time" class="font-mono text-slate-700">--</span></p>
+      </div>
+
+      <form id="form-assign-app" onsubmit="submitAssign(event)" class="space-y-3.5">
+        <input type="hidden" id="assign-app-id">
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Especialista / Profissional Responsável:</label>
+          <select id="assign-specialist-select" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:ring-rose-500 focus:outline-none font-semibold text-slate-800">
+            <option value="">-- Sem especialista atribuído --</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Cabine / Sala de Atendimento:</label>
+          <select id="assign-cabin-select" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:ring-amber-500 focus:outline-none font-semibold text-slate-800">
+            <option value="">-- Sem cabine atribuída --</option>
+          </select>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+          <button type="button" onclick="closeAssignModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" id="btn-save-assign" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-200 transition cursor-pointer">
+            Confirmar Atribuição
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- MODAL: CONFIGURAÇÃO DE RECEBIMENTO DO SUPERADMIN (CHAVE PIX E WHATSAPP) -->
@@ -2155,6 +2577,8 @@
     async function initDashboard() {
       await loadCurrentUserAndClinic();
       loadAppointments();
+      loadSpecialists();
+      loadCabins();
       loadClients();
       loadServices();
       loadClientPackages();
@@ -2192,7 +2616,7 @@
     }
 
     function switchTab(tab) {
-      ['appointments', 'clients', 'packages-control', 'cashflow', 'analytics', 'reports', 'packages', 'settings', 'saas'].forEach(t => {
+      ['appointments', 'specialists', 'cabins', 'clients', 'packages-control', 'cashflow', 'analytics', 'reports', 'packages', 'settings', 'saas'].forEach(t => {
         const sec = document.getElementById(`section-${t}`);
         const btn = document.getElementById(`tab-btn-${t}`);
         if (sec) sec.classList.add('hidden');
@@ -2218,6 +2642,8 @@
 
       const tabTitles = {
         'appointments': 'Atendimentos & Agenda',
+        'specialists': 'Especialistas & Equipe',
+        'cabins': 'Cabines & Salas de Atendimento',
         'clients': 'Cadastro de Clientes & Fichas',
         'packages-control': 'Controle de Pacotes (Sessões)',
         'cashflow': 'Fluxo de Caixa',
@@ -2234,6 +2660,8 @@
         closeSidebar();
       }
 
+      if (tab === 'specialists') loadSpecialists();
+      if (tab === 'cabins') loadCabins();
       if (tab === 'packages' || tab === 'packages-control') { loadServices(); loadClientPackages(); }
       if (tab === 'clients') loadClients();
       if (tab === 'cashflow') loadCashFlow();
@@ -2796,10 +3224,473 @@
       window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
     }
 
-    // 1. ATENDIMENTOS
+    // --- GESTÃO DE ESPECIALISTAS & CABINES ---
+    let specialistsList = [];
+    let cabinsList = [];
+
+    // 1. ESPECIALISTAS
+    async function loadSpecialists() {
+      try {
+        const res = await fetch('/api/admin/specialists', { headers: getAdminHeaders() });
+        if (!res.ok) return;
+        specialistsList = await res.json();
+        renderSpecialists(specialistsList);
+        updateAssignSelectOptions();
+      } catch (err) {
+        console.error("Erro ao carregar especialistas:", err);
+      }
+    }
+
+    function renderSpecialists(items) {
+      const tbody = document.getElementById('specialists-tbody');
+      if (!tbody) return;
+
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Nenhum especialista cadastrado ainda. Clique em "+ Novo Especialista" para adicionar.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = items.map(spec => {
+        const color = spec.color || '#f43f5e';
+        const statusBadge = spec.is_active 
+          ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Ativo</span>`
+          : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Inativo</span>`;
+        
+        const safeName = (spec.name || '').replace(/'/g, "\\'");
+
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-xs" style="background-color: ${color}"></span>
+              <div>
+                <div>${spec.name}</div>
+                ${spec.email ? `<div class="text-[11px] font-normal text-slate-400">${spec.email}</div>` : ''}
+              </div>
+            </td>
+            <td class="py-3.5 px-4 font-medium text-slate-700">${spec.specialty || '--'}</td>
+            <td class="py-3.5 px-4 text-xs font-mono text-slate-600">${spec.phone || '--'}</td>
+            <td class="py-3.5 px-4">
+              <div class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full border border-slate-200 shadow-xs" style="background-color: ${color}"></span>
+                <span class="text-xs font-mono text-slate-500">${color}</span>
+              </div>
+            </td>
+            <td class="py-3.5 px-4">${statusBadge}</td>
+            <td class="py-3.5 px-4">
+              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg">${spec.appointment_count || 0} atendimentos</span>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button onclick="editSpecialist(${spec.id})" class="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Editar Especialista">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteSpecialist(${spec.id}, '${safeName}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Excluir Especialista">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterSpecialistsTable() {
+      const q = (document.getElementById('search-specialist')?.value || '').toLowerCase();
+      if (!q) {
+        renderSpecialists(specialistsList);
+        return;
+      }
+      const filtered = specialistsList.filter(s => 
+        (s.name && s.name.toLowerCase().includes(q)) || 
+        (s.specialty && s.specialty.toLowerCase().includes(q)) ||
+        (s.phone && s.phone.includes(q))
+      );
+      renderSpecialists(filtered);
+    }
+
+    function openSpecialistModal(specId = null) {
+      const titleEl = document.getElementById('modal-specialist-title');
+      const idEl = document.getElementById('specialist-id');
+      const nameEl = document.getElementById('specialist-name');
+      const specEl = document.getElementById('specialist-specialty');
+      const phoneEl = document.getElementById('specialist-phone');
+      const colorEl = document.getElementById('specialist-color');
+      const emailEl = document.getElementById('specialist-email');
+      const activeEl = document.getElementById('specialist-active');
+
+      if (specId) {
+        const spec = specialistsList.find(s => s.id === specId);
+        if (!spec) return;
+        if (titleEl) titleEl.textContent = 'Editar Especialista';
+        if (idEl) idEl.value = spec.id;
+        if (nameEl) nameEl.value = spec.name || '';
+        if (specEl) specEl.value = spec.specialty || '';
+        if (phoneEl) phoneEl.value = spec.phone || '';
+        if (colorEl) colorEl.value = spec.color || '#f43f5e';
+        if (emailEl) emailEl.value = spec.email || '';
+        if (activeEl) activeEl.value = spec.is_active ? '1' : '0';
+      } else {
+        if (titleEl) titleEl.textContent = 'Novo Especialista';
+        if (idEl) idEl.value = '';
+        if (nameEl) nameEl.value = '';
+        if (specEl) specEl.value = '';
+        if (phoneEl) phoneEl.value = '';
+        if (colorEl) colorEl.value = '#f43f5e';
+        if (emailEl) emailEl.value = '';
+        if (activeEl) activeEl.value = '1';
+      }
+
+      const modal = document.getElementById('modal-specialist');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeSpecialistModal() {
+      const modal = document.getElementById('modal-specialist');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function editSpecialist(id) {
+      openSpecialistModal(id);
+    }
+
+    async function submitSpecialist(e) {
+      e.preventDefault();
+      const id = document.getElementById('specialist-id').value;
+      const payload = {
+        name: document.getElementById('specialist-name').value.trim(),
+        specialty: document.getElementById('specialist-specialty').value.trim(),
+        phone: document.getElementById('specialist-phone').value.trim() || null,
+        email: document.getElementById('specialist-email').value.trim() || null,
+        color: document.getElementById('specialist-color').value || '#f43f5e',
+        is_active: parseInt(document.getElementById('specialist-active').value)
+      };
+
+      try {
+        let res;
+        if (id) {
+          res = await fetch(`/api/admin/specialists/${id}`, {
+            method: 'PUT',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch('/api/admin/specialists', {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || "Erro ao salvar especialista.");
+          return;
+        }
+
+        closeSpecialistModal();
+        await loadSpecialists();
+      } catch (err) {
+        console.error("Erro ao salvar especialista:", err);
+        alert("Erro de comunicação ao salvar especialista.");
+      }
+    }
+
+    async function deleteSpecialist(id, name) {
+      if (!confirm(`Tem certeza que deseja remover o(a) especialista "${name}"?\nOs agendamentos anteriores não serão apagados.`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/specialists/${id}`, {
+          method: 'DELETE',
+          headers: getAdminHeaders()
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || "Erro ao remover especialista.");
+          return;
+        }
+
+        await loadSpecialists();
+      } catch (err) {
+        console.error("Erro ao excluir especialista:", err);
+        alert("Erro de comunicação ao remover especialista.");
+      }
+    }
+
+    // 2. CABINES & SALAS
+    async function loadCabins() {
+      try {
+        const res = await fetch('/api/admin/cabins', { headers: getAdminHeaders() });
+        if (!res.ok) return;
+        cabinsList = await res.json();
+        renderCabins(cabinsList);
+        updateAssignSelectOptions();
+      } catch (err) {
+        console.error("Erro ao carregar cabines:", err);
+      }
+    }
+
+    function renderCabins(items) {
+      const tbody = document.getElementById('cabins-tbody');
+      if (!tbody) return;
+
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">Nenhuma cabine ou sala cadastrada. Clique em "+ Nova Cabine / Sala" para cadastrar.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = items.map(cab => {
+        const statusBadge = cab.is_active 
+          ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Liberada</span>`
+          : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Inativa / Manutenção</span>`;
+        
+        const safeName = (cab.name || '').replace(/'/g, "\\'");
+
+        return `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-3.5 px-4 font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center text-sm shadow-xs"><i class="fa-solid fa-door-open"></i></span>
+              <span>${cab.name}</span>
+            </td>
+            <td class="py-3.5 px-4 text-xs text-slate-600 max-w-xs truncate">${cab.description || '--'}</td>
+            <td class="py-3.5 px-4">${statusBadge}</td>
+            <td class="py-3.5 px-4">
+              <span class="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">${cab.appointment_count || 0} atendimentos</span>
+            </td>
+            <td class="py-3.5 px-4 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <button onclick="editCabin(${cab.id})" class="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Editar Cabine">
+                  <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteCabin(${cab.id}, '${safeName}')" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Excluir Cabine">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openCabinModal(cabinId = null) {
+      const titleEl = document.getElementById('modal-cabin-title');
+      const idEl = document.getElementById('cabin-id');
+      const nameEl = document.getElementById('cabin-name');
+      const descEl = document.getElementById('cabin-description');
+      const activeEl = document.getElementById('cabin-active');
+
+      if (cabinId) {
+        const cab = cabinsList.find(c => c.id === cabinId);
+        if (!cab) return;
+        if (titleEl) titleEl.textContent = 'Editar Cabine / Sala';
+        if (idEl) idEl.value = cab.id;
+        if (nameEl) nameEl.value = cab.name || '';
+        if (descEl) descEl.value = cab.description || '';
+        if (activeEl) activeEl.value = cab.is_active ? '1' : '0';
+      } else {
+        if (titleEl) titleEl.textContent = 'Nova Cabine / Sala';
+        if (idEl) idEl.value = '';
+        if (nameEl) nameEl.value = '';
+        if (descEl) descEl.value = '';
+        if (activeEl) activeEl.value = '1';
+      }
+
+      const modal = document.getElementById('modal-cabin');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeCabinModal() {
+      const modal = document.getElementById('modal-cabin');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function editCabin(id) {
+      openCabinModal(id);
+    }
+
+    async function submitCabin(e) {
+      e.preventDefault();
+      const id = document.getElementById('cabin-id').value;
+      const payload = {
+        name: document.getElementById('cabin-name').value.trim(),
+        description: document.getElementById('cabin-description').value.trim() || null,
+        is_active: parseInt(document.getElementById('cabin-active').value)
+      };
+
+      try {
+        let res;
+        if (id) {
+          res = await fetch(`/api/admin/cabins/${id}`, {
+            method: 'PUT',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch('/api/admin/cabins', {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(payload)
+          });
+        }
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || "Erro ao salvar cabine.");
+          return;
+        }
+
+        closeCabinModal();
+        await loadCabins();
+      } catch (err) {
+        console.error("Erro ao salvar cabine:", err);
+        alert("Erro de comunicação ao salvar cabine.");
+      }
+    }
+
+    async function deleteCabin(id, name) {
+      if (!confirm(`Tem certeza que deseja remover a cabine/sala "${name}"?\nOs agendamentos vinculados não serão apagados.`)) return;
+
+      try {
+        const res = await fetch(`/api/admin/cabins/${id}`, {
+          method: 'DELETE',
+          headers: getAdminHeaders()
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || "Erro ao remover cabine.");
+          return;
+        }
+
+        await loadCabins();
+      } catch (err) {
+        console.error("Erro ao excluir cabine:", err);
+        alert("Erro de comunicação ao remover cabine.");
+      }
+    }
+
+    // 3. ATRIBUIÇÃO AO AGENDAMENTO (ESPECIALISTA + CABINE)
+    function updateAssignSelectOptions() {
+      const specSelect = document.getElementById('assign-specialist-select');
+      const cabinSelect = document.getElementById('assign-cabin-select');
+
+      if (specSelect) {
+        const currentVal = specSelect.value;
+        specSelect.innerHTML = `<option value="">-- Sem especialista atribuído --</option>` +
+          specialistsList.map(s => `<option value="${s.id}">${s.name} (${s.specialty || 'Especialista'})${!s.is_active ? ' [Inativo]' : ''}</option>`).join('');
+        if (currentVal) specSelect.value = currentVal;
+      }
+
+      if (cabinSelect) {
+        const currentVal = cabinSelect.value;
+        cabinSelect.innerHTML = `<option value="">-- Sem cabine atribuída --</option>` +
+          cabinsList.map(c => `<option value="${c.id}">${c.name}${!c.is_active ? ' [Inativa]' : ''}</option>`).join('');
+        if (currentVal) cabinSelect.value = currentVal;
+      }
+    }
+
+    function openAssignModal(appointmentId, currentSpecialistId, currentCabinId, clientName, serviceName, timeStr) {
+      updateAssignSelectOptions();
+      document.getElementById('assign-app-id').value = appointmentId;
+      document.getElementById('assign-client-name').textContent = clientName || 'Cliente';
+      document.getElementById('assign-service-name').textContent = serviceName || 'Procedimento';
+      document.getElementById('assign-time').textContent = timeStr || '--';
+
+      const specSelect = document.getElementById('assign-specialist-select');
+      const cabinSelect = document.getElementById('assign-cabin-select');
+      if (specSelect) specSelect.value = currentSpecialistId || '';
+      if (cabinSelect) cabinSelect.value = currentCabinId || '';
+
+      const modal = document.getElementById('modal-assign-appointment');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeAssignModal() {
+      const modal = document.getElementById('modal-assign-appointment');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function submitAssign(e) {
+      e.preventDefault();
+      const appId = document.getElementById('assign-app-id').value;
+      const specVal = document.getElementById('assign-specialist-select').value;
+      const cabinVal = document.getElementById('assign-cabin-select').value;
+
+      const payload = {
+        specialist_id: specVal ? parseInt(specVal) : null,
+        cabin_id: cabinVal ? parseInt(cabinVal) : null
+      };
+
+      try {
+        const res = await fetch(`/api/appointments/${appId}/assign`, {
+          method: 'PUT',
+          headers: getAdminHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          alert(errData.detail || "Erro ao vincular especialista ou cabine.");
+          return;
+        }
+
+        closeAssignModal();
+        await loadAppointments();
+        if (currentAppointmentsView === 'calendar') {
+          await loadAppointmentsForCalendar();
+        }
+      } catch (err) {
+        console.error("Erro ao salvar vinculação:", err);
+        alert("Erro de comunicação ao atualizar atendimento.");
+      }
+    }
+
+    // 1. ATENDIMENTOS & MODOS DE VISUALIZAÇÃO (FUNIL KANBAN, CALENDÁRIO MENSAL, TABELA)
+    let currentAppointmentsView = 'kanban'; // 'kanban', 'calendar', 'table'
+    let calendarCurrentYear = new Date().getFullYear();
+    let calendarCurrentMonth = new Date().getMonth(); // 0-11
+    let calendarSelectedDateStr = new Date().toISOString().split('T')[0];
+    let calendarAppointmentsList = [];
+    let draggedAppointmentId = null;
+
+    const monthNamesPt = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const weekdayNamesPt = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+    function switchAppointmentsView(view) {
+      currentAppointmentsView = view;
+
+      const kanbanSec = document.getElementById('appointments-view-kanban');
+      const calSec = document.getElementById('appointments-view-calendar');
+      const tableSec = document.getElementById('appointments-view-table');
+
+      const btnKanban = document.getElementById('btn-view-kanban');
+      const btnCal = document.getElementById('btn-view-calendar');
+      const btnTable = document.getElementById('btn-view-table');
+
+      const activeBtnClass = "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer bg-white text-rose-600 shadow-xs";
+      const inactiveBtnClass = "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer text-slate-600 hover:text-slate-900";
+
+      if (kanbanSec) kanbanSec.classList.toggle('hidden', view !== 'kanban');
+      if (calSec) calSec.classList.toggle('hidden', view !== 'calendar');
+      if (tableSec) tableSec.classList.toggle('hidden', view !== 'table');
+
+      if (btnKanban) btnKanban.className = (view === 'kanban' ? activeBtnClass : inactiveBtnClass);
+      if (btnCal) btnCal.className = (view === 'calendar' ? activeBtnClass : inactiveBtnClass);
+      if (btnTable) btnTable.className = (view === 'table' ? activeBtnClass : inactiveBtnClass);
+
+      if (view === 'calendar') {
+        loadAppointmentsForCalendar();
+      } else {
+        renderCurrentAppointments();
+      }
+    }
+
     async function loadAppointments() {
-      const dateVal = document.getElementById('filter-date').value;
-      const statusVal = document.getElementById('filter-status').value;
+      const dateVal = document.getElementById('filter-date')?.value;
+      const statusVal = document.getElementById('filter-status')?.value;
 
       let url = '/api/appointments';
       const params = [];
@@ -2811,22 +3702,445 @@
         const res = await fetch(url, { headers: getAdminHeaders() });
         if (res.status === 401) { logoutAdmin(); return; }
         appointmentsList = await res.json();
-        renderAppointments(appointmentsList);
+        renderCurrentAppointments();
       } catch (err) {
         console.error("Erro ao listar agendamentos", err);
       }
     }
 
+    function renderCurrentAppointments() {
+      const searchVal = (document.getElementById('filter-app-search')?.value || '').toLowerCase().trim();
+      let filtered = appointmentsList;
+      if (searchVal) {
+        filtered = appointmentsList.filter(a => 
+          (a.client_name && a.client_name.toLowerCase().includes(searchVal)) ||
+          (a.client_phone && a.client_phone.includes(searchVal)) ||
+          (a.service_name && a.service_name.toLowerCase().includes(searchVal)) ||
+          (a.specialist_name && a.specialist_name.toLowerCase().includes(searchVal)) ||
+          (a.cabin_name && a.cabin_name.toLowerCase().includes(searchVal))
+        );
+      }
+
+      renderAppointments(filtered);
+      renderKanban(filtered);
+      if (currentAppointmentsView === 'calendar') {
+        renderCalendar();
+      }
+    }
+
+    function filterAppointmentsView() {
+      renderCurrentAppointments();
+    }
+
+    // --- FUNIL KANBAN (TIPO TRELLO) ---
+    function renderKanban(apps) {
+      const statuses = ['agendado', 'confirmado', 'concluido', 'cancelado'];
+      const grouped = { agendado: [], confirmado: [], concluido: [], cancelado: [] };
+
+      apps.forEach(app => {
+        const st = (app.status || 'agendado').toLowerCase();
+        if (grouped[st]) {
+          grouped[st].push(app);
+        } else {
+          grouped['agendado'].push(app);
+        }
+      });
+
+      statuses.forEach(st => {
+        const container = document.getElementById(`kanban-col-${st}`);
+        const countEl = document.getElementById(`kanban-count-${st}`);
+        const list = grouped[st] || [];
+
+        if (countEl) countEl.textContent = list.length;
+
+        if (container) {
+          if (list.length === 0) {
+            container.innerHTML = `
+              <div class="h-32 flex flex-col items-center justify-center border-2 border-dashed border-slate-200/70 rounded-2xl text-slate-400 text-xs text-center p-3">
+                <i class="fa-regular fa-folder-open text-xl mb-1 text-slate-300"></i>
+                <span>Nenhum atendimento</span>
+              </div>
+            `;
+          } else {
+            container.innerHTML = list.map(app => createKanbanCardHtml(app)).join('');
+          }
+        }
+      });
+    }
+
+    function createKanbanCardHtml(app) {
+      const [y, m, d] = (app.appointment_date || '').split('-');
+      const dateFormatted = `${d}/${m}`;
+      const safeClient = (app.client_name || '').replace(/'/g, "\\'");
+      const safeService = (app.service_name || '').replace(/'/g, "\\'");
+
+      const specHtml = app.specialist_name ? `
+        <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg w-fit">
+          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ${app.specialist_color || '#f43f5e'}"></span>
+          <span class="truncate max-w-[140px]">${app.specialist_name}</span>
+        </div>
+      ` : '';
+
+      const cabinHtml = app.cabin_name ? `
+        <div class="flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-md w-fit">
+          <i class="fa-solid fa-door-open text-[9px]"></i>
+          <span class="truncate max-w-[120px]">${app.cabin_name}</span>
+        </div>
+      ` : '';
+
+      return `
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition space-y-2.5 cursor-grab active:cursor-grabbing group relative select-none"
+             draggable="true" ondragstart="handleKanbanDragStart(event, ${app.id})">
+          
+          <!-- Topo: Data, Hora e Preço -->
+          <div class="flex items-center justify-between text-xs pb-1.5 border-b border-slate-100">
+            <span class="font-bold text-slate-800 flex items-center gap-1">
+              <i class="fa-regular fa-calendar text-rose-500 text-[11px]"></i> ${dateFormatted}
+              <span class="text-rose-600 font-extrabold ml-1">⏰ ${app.appointment_time}</span>
+            </span>
+            <span class="font-extrabold text-emerald-600 text-xs bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
+              R$ ${app.service_price.toFixed(2).replace('.', ',')}
+            </span>
+          </div>
+
+          <!-- Cliente & Procedimento -->
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <h5 class="font-extrabold text-slate-900 text-sm leading-tight truncate">${app.client_name}</h5>
+              <p class="text-xs text-slate-500 font-medium truncate mt-0.5">${app.service_name}</p>
+            </div>
+            <button type="button" onclick="openWhatsAppModalForApp(${app.id})" class="w-8 h-8 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center transition flex-shrink-0 cursor-pointer shadow-xs" title="Notificar no WhatsApp">
+              <i class="fa-brands fa-whatsapp text-base"></i>
+            </button>
+          </div>
+
+          <!-- Tags Especialista & Cabine -->
+          ${(specHtml || cabinHtml) ? `
+            <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+              ${specHtml}
+              ${cabinHtml}
+            </div>
+          ` : ''}
+
+          <!-- Mover Etapa e Ações Rápidas -->
+          <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1 text-xs">
+            <select onchange="updateStatus(${app.id}, this.value)" class="text-[11px] font-bold px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 focus:outline-none cursor-pointer flex-1">
+              <option value="agendado" ${app.status === 'agendado' ? 'selected' : ''}>🟡 Agendado</option>
+              <option value="confirmado" ${app.status === 'confirmado' ? 'selected' : ''}>🔵 Confirmado</option>
+              <option value="concluido" ${app.status === 'concluido' ? 'selected' : ''}>🟢 Concluído</option>
+              <option value="cancelado" ${app.status === 'cancelado' ? 'selected' : ''}>🔴 Cancelado</option>
+            </select>
+
+            <div class="flex items-center gap-1">
+              <button type="button" onclick="openAssignModal(${app.id}, ${app.specialist_id || 'null'}, ${app.cabin_id || 'null'}, '${safeClient}', '${safeService}', '${dateFormatted} às ${app.appointment_time}')" class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition cursor-pointer" title="Vincular Especialista / Sala">
+                <i class="fa-solid fa-user-doctor text-xs"></i>
+              </button>
+              <button type="button" onclick="openRescheduleModal(${app.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Reagendar">
+                <i class="fa-regular fa-clock text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleKanbanDragStart(e, appId) {
+      draggedAppointmentId = appId;
+      e.dataTransfer.setData('text/plain', appId);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleKanbanDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+
+    async function handleKanbanDrop(e, targetStatus) {
+      e.preventDefault();
+      const appId = draggedAppointmentId || e.dataTransfer.getData('text/plain');
+      if (!appId) return;
+      const app = appointmentsList.find(a => a.id == appId);
+      if (!app || app.status === targetStatus) return;
+
+      await updateStatus(parseInt(appId), targetStatus);
+    }
+
+    // --- CALENDÁRIO DO MÊS ---
+    async function loadAppointmentsForCalendar() {
+      const mStr = `${calendarCurrentYear}-${String(calendarCurrentMonth + 1).padStart(2, '0')}`;
+      try {
+        const res = await fetch(`/api/appointments?month=${mStr}`, { headers: getAdminHeaders() });
+        if (!res.ok) return;
+        calendarAppointmentsList = await res.json();
+        renderCalendar();
+      } catch (err) {
+        console.error("Erro ao carregar agendamentos do mês:", err);
+      }
+    }
+
+    function changeCalendarMonth(delta) {
+      calendarCurrentMonth += delta;
+      if (calendarCurrentMonth < 0) {
+        calendarCurrentMonth = 11;
+        calendarCurrentYear--;
+      } else if (calendarCurrentMonth > 11) {
+        calendarCurrentMonth = 0;
+        calendarCurrentYear++;
+      }
+      loadAppointmentsForCalendar();
+    }
+
+    function goToCalendarToday() {
+      const today = new Date();
+      calendarCurrentYear = today.getFullYear();
+      calendarCurrentMonth = today.getMonth();
+      calendarSelectedDateStr = today.toISOString().split('T')[0];
+      loadAppointmentsForCalendar();
+    }
+
+    function renderCalendar() {
+      const titleEl = document.getElementById('calendar-month-title');
+      const countEl = document.getElementById('calendar-total-month-count');
+      const grid = document.getElementById('calendar-days-grid');
+      if (!grid) return;
+
+      if (titleEl) {
+        titleEl.textContent = `${monthNamesPt[calendarCurrentMonth]} de ${calendarCurrentYear}`;
+      }
+      if (countEl) {
+        countEl.textContent = `${calendarAppointmentsList.length} agendamentos em ${monthNamesPt[calendarCurrentMonth]}`;
+      }
+
+      const firstDayIndex = new Date(calendarCurrentYear, calendarCurrentMonth, 1).getDay(); // 0 = Dom
+      const daysInMonth = new Date(calendarCurrentYear, calendarCurrentMonth + 1, 0).getDate();
+      const daysInPrevMonth = new Date(calendarCurrentYear, calendarCurrentMonth, 0).getDate();
+
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      let cellsHtml = '';
+
+      // Dias do mês anterior
+      for (let i = firstDayIndex - 1; i >= 0; i--) {
+        const d = daysInPrevMonth - i;
+        cellsHtml += `
+          <div class="p-2 min-h-[90px] sm:min-h-[105px] bg-slate-50/60 text-slate-300 border-b border-r border-slate-100 select-none">
+            <span class="font-semibold text-xs">${d}</span>
+          </div>
+        `;
+      }
+
+      // Dias do mês atual
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${calendarCurrentYear}-${String(calendarCurrentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayApps = calendarAppointmentsList.filter(a => a.appointment_date === dateStr);
+        const isToday = (dateStr === todayStr);
+        const isSelected = (dateStr === calendarSelectedDateStr);
+
+        let cellClasses = "p-2 min-h-[90px] sm:min-h-[105px] border-b border-r border-slate-100 transition flex flex-col justify-between cursor-pointer hover:bg-rose-50/30 ";
+        if (isSelected) {
+          cellClasses += "bg-rose-50/80 ring-2 ring-inset ring-rose-500 shadow-inner ";
+        } else if (isToday) {
+          cellClasses += "bg-amber-50/50 ";
+        } else {
+          cellClasses += "bg-white ";
+        }
+
+        cellsHtml += `
+          <div onclick="selectCalendarDate('${dateStr}')" class="${cellClasses}">
+            <div class="flex items-center justify-between">
+              <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs ${isToday ? 'bg-rose-500 text-white shadow-xs' : (isSelected ? 'bg-rose-600 text-white' : 'text-slate-800')}">
+                ${day}
+              </span>
+              ${dayApps.length > 0 ? `
+                <span class="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-200">
+                  ${dayApps.length}
+                </span>
+              ` : ''}
+            </div>
+
+            ${dayApps.length > 0 ? `
+              <div class="space-y-1 mt-1 overflow-hidden">
+                ${dayApps.slice(0, 2).map(a => `
+                  <div class="text-[10px] truncate px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 font-medium" title="${a.appointment_time} - ${a.client_name}">
+                    <span class="w-1.5 h-1.5 rounded-full inline-block mr-0.5" style="background-color: ${a.specialist_color || '#f43f5e'}"></span>
+                    <strong class="font-mono">${a.appointment_time}</strong> ${a.client_name.split(' ')[0]}
+                  </div>
+                `).join('')}
+                ${dayApps.length > 2 ? `
+                  <div class="text-[9px] text-rose-600 font-extrabold pl-1">+${dayApps.length - 2} cliente(s)</div>
+                ` : ''}
+              </div>
+            ` : `
+              <div class="flex-1"></div>
+            `}
+          </div>
+        `;
+      }
+
+      // Dias do próximo mês para completar grid de 7 colunas
+      const totalRendered = firstDayIndex + daysInMonth;
+      const nextDays = (totalRendered % 7 === 0) ? 0 : 7 - (totalRendered % 7);
+      for (let day = 1; day <= nextDays; day++) {
+        cellsHtml += `
+          <div class="p-2 min-h-[90px] sm:min-h-[105px] bg-slate-50/60 text-slate-300 border-b border-r border-slate-100 select-none">
+            <span class="font-semibold text-xs">${day}</span>
+          </div>
+        `;
+      }
+
+      grid.innerHTML = cellsHtml;
+
+      // Renderiza os detalhes do dia selecionado
+      renderCalendarSelectedDayDetails(calendarSelectedDateStr);
+    }
+
+    function selectCalendarDate(dateStr) {
+      calendarSelectedDateStr = dateStr;
+      renderCalendar();
+      const panel = document.getElementById('calendar-day-details-panel');
+      if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    function renderCalendarSelectedDayDetails(dateStr) {
+      const titleLabel = document.getElementById('calendar-selected-day-label');
+      const subLabel = document.getElementById('calendar-selected-day-sub');
+      const badgeEl = document.getElementById('calendar-selected-day-badge');
+      const listEl = document.getElementById('calendar-day-appointments-list');
+      if (!listEl) return;
+
+      const [y, m, d] = (dateStr || '').split('-');
+      const dObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+      const weekday = weekdayNamesPt[dObj.getDay()] || '';
+      const monthName = monthNamesPt[parseInt(m) - 1] || '';
+
+      if (titleLabel) {
+        titleLabel.textContent = `Clientes Agendados para ${weekday}, ${d} de ${monthName} de ${y}`;
+      }
+
+      const dayApps = calendarAppointmentsList.filter(a => a.appointment_date === dateStr);
+
+      if (badgeEl) {
+        badgeEl.innerHTML = `
+          <span class="px-3 py-1 rounded-full text-xs font-bold ${dayApps.length > 0 ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-slate-100 text-slate-600'}">
+            ${dayApps.length} ${dayApps.length === 1 ? 'cliente agendado' : 'clientes agendados'}
+          </span>
+        `;
+      }
+
+      if (subLabel) {
+        subLabel.textContent = dayApps.length > 0 
+          ? `Gerencie o status, profissionais e envie mensagens de WhatsApp para os clientes deste dia:`
+          : `Não há nenhum agendamento cadastrado para esta data.`;
+      }
+
+      if (dayApps.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-10 text-slate-400 p-6 bg-slate-50/70 rounded-2xl border-2 border-dashed border-slate-200 space-y-2">
+            <i class="fa-regular fa-calendar-xmark text-4xl text-slate-300"></i>
+            <h5 class="font-bold text-sm text-slate-700">Nenhum atendimento agendado para este dia</h5>
+            <p class="text-xs text-slate-400 max-w-sm mx-auto">Quando clientes agendarem pelo link ou você cadastrar um agendamento para esta data, eles serão listados aqui.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = dayApps.map(app => {
+        const safeClient = (app.client_name || '').replace(/'/g, "\\'");
+        const safeService = (app.service_name || '').replace(/'/g, "\\'");
+
+        const specHtml = app.specialist_name ? `
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${app.specialist_color || '#f43f5e'}"></span>
+            ${app.specialist_name}
+          </span>
+        ` : `<span class="text-xs text-slate-400 italic">Sem especialista atribuído</span>`;
+
+        const cabinHtml = app.cabin_name ? `
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
+            <i class="fa-solid fa-door-open text-xs"></i>
+            ${app.cabin_name}
+          </span>
+        ` : `<span class="text-xs text-slate-400 italic">Sem cabine atribuída</span>`;
+
+        return `
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <!-- Coluna Horário e Cliente -->
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-extrabold text-xs flex items-center gap-1 border border-rose-200 font-mono">
+                  <i class="fa-regular fa-clock"></i> ${app.appointment_time}
+                </span>
+                <span class="text-sm font-black text-slate-900">${app.client_name}</span>
+                <button type="button" onclick="openWhatsAppModalForApp(${app.id})" class="text-emerald-600 hover:text-emerald-700 text-xs font-bold flex items-center gap-1 ml-1" title="WhatsApp">
+                  <i class="fa-brands fa-whatsapp text-sm"></i> ${app.client_phone}
+                </button>
+              </div>
+
+              <div class="text-xs text-slate-600 flex flex-wrap items-center gap-3">
+                <span class="font-semibold text-slate-800">${app.service_name}</span>
+                <span class="text-emerald-600 font-bold">R$ ${app.service_price.toFixed(2).replace('.', ',')}</span>
+                <span class="text-slate-400">•</span>
+                <div class="flex items-center gap-2">
+                  ${specHtml}
+                  ${cabinHtml}
+                </div>
+              </div>
+            </div>
+
+            <!-- Coluna Status e Ações -->
+            <div class="flex items-center gap-2 self-start md:self-auto flex-wrap">
+              <select onchange="updateStatus(${app.id}, this.value)" class="text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none cursor-pointer">
+                <option value="agendado" ${app.status === 'agendado' ? 'selected' : ''}>🟡 Agendado</option>
+                <option value="confirmado" ${app.status === 'confirmado' ? 'selected' : ''}>🔵 Confirmado</option>
+                <option value="concluido" ${app.status === 'concluido' ? 'selected' : ''}>🟢 Concluído</option>
+                <option value="cancelado" ${app.status === 'cancelado' ? 'selected' : ''}>🔴 Cancelado</option>
+              </select>
+
+              <button type="button" onclick="openAssignModal(${app.id}, ${app.specialist_id || 'null'}, ${app.cabin_id || 'null'}, '${safeClient}', '${safeService}', '${d}/${m}/${y} às ${app.appointment_time}')" class="px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer" title="Vincular Especialista / Cabine">
+                <i class="fa-solid fa-user-doctor"></i> Vincular Sala / Profissional
+              </button>
+
+              <button type="button" onclick="openWhatsAppModalForApp(${app.id})" class="px-2.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                <i class="fa-brands fa-whatsapp"></i> Avisar
+              </button>
+
+              <button type="button" onclick="openRescheduleModal(${app.id})" class="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-500 transition cursor-pointer" title="Reagendar Atendimento">
+                <i class="fa-solid fa-calendar-days text-xs"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- TABELA ORIGINAL ---
     function renderAppointments(apps) {
       const tbody = document.getElementById('appointments-tbody');
+      if (!tbody) return;
       if (apps.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum agendamento encontrado com os filtros atuais.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400">Nenhum agendamento encontrado com os filtros atuais.</td></tr>`;
         return;
       }
 
       tbody.innerHTML = apps.map(app => {
-        const [y, m, d] = app.appointment_date.split('-');
+        const [y, m, d] = (app.appointment_date || '').split('-');
         const dateFormatted = `${d}/${m}/${y}`;
+
+        const specHtml = app.specialist_name ? `
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${app.specialist_color || '#f43f5e'}"></span>
+            <span class="text-xs font-bold text-slate-800 truncate max-w-[130px]">${app.specialist_name}</span>
+          </div>
+        ` : `<span class="text-xs text-slate-400 italic">Sem especialista</span>`;
+
+        const cabinHtml = app.cabin_name ? `
+          <div class="flex items-center gap-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg w-fit">
+            <i class="fa-solid fa-door-open text-[10px]"></i>
+            <span class="truncate max-w-[110px]">${app.cabin_name}</span>
+          </div>
+        ` : `<span class="text-[11px] text-slate-400 italic">Sem cabine</span>`;
 
         return `
           <tr class="hover:bg-slate-50/80 transition">
@@ -2843,6 +4157,15 @@
               <div class="text-xs text-emerald-600 font-semibold">R$ ${app.service_price.toFixed(2).replace('.', ',')}</div>
             </td>
             <td class="py-4 px-4">
+              <div class="space-y-1">
+                ${specHtml}
+                ${cabinHtml}
+                <button onclick="openAssignModal(${app.id}, ${app.specialist_id || 'null'}, ${app.cabin_id || 'null'}, '${(app.client_name || '').replace(/'/g, "\\'")}', '${(app.service_name || '').replace(/'/g, "\\'")}', '${dateFormatted} às ${app.appointment_time}')" class="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1 cursor-pointer pt-0.5" title="Alterar Especialista e Cabine">
+                  <i class="fa-solid fa-pen-to-square"></i> Vincular Sala / Profissional
+                </button>
+              </div>
+            </td>
+            <td class="py-4 px-4">
               <select onchange="updateStatus(${app.id}, this.value)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border focus:outline-none badge-${app.status}">
                 <option value="agendado" ${app.status === 'agendado' ? 'selected' : ''}>Agendado</option>
                 <option value="confirmado" ${app.status === 'confirmado' ? 'selected' : ''}>Confirmado</option>
@@ -2851,12 +4174,12 @@
               </select>
             </td>
             <td class="py-4 px-4 text-center">
-              <button onclick="openWhatsAppModalForApp(${app.id})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200 transition">
+              <button onclick="openWhatsAppModalForApp(${app.id})" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200 transition cursor-pointer">
                 <i class="fa-brands fa-whatsapp text-sm"></i> Notificar Cliente
               </button>
             </td>
             <td class="py-4 px-4 text-right">
-              <button onclick="openRescheduleModal(${app.id})" title="Reagendar" class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
+              <button onclick="openRescheduleModal(${app.id})" title="Reagendar" class="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer">
                 <i class="fa-solid fa-calendar-days"></i> Reagendar
               </button>
             </td>
@@ -4023,6 +5346,9 @@
         if (!res.ok) { alert("Erro ao reagendar."); return; }
         closeRescheduleModal();
         loadAppointments();
+        if (currentAppointmentsView === 'calendar') {
+          loadAppointmentsForCalendar();
+        }
         alert("Agendamento remarcado com sucesso!");
       } catch (err) { alert("Erro na conexão."); }
     }
@@ -4039,6 +5365,9 @@
           body: JSON.stringify({ status: newStatus })
         });
         loadAppointments();
+        if (currentAppointmentsView === 'calendar') {
+          loadAppointmentsForCalendar();
+        }
         loadAnalytics();
       } catch (err) { alert("Erro ao atualizar status."); }
     }
@@ -4125,9 +5454,16 @@
     }
 
     function clearFilters() {
-      document.getElementById('filter-date').value = '';
-      document.getElementById('filter-status').value = 'todos';
+      const d = document.getElementById('filter-date');
+      const s = document.getElementById('filter-status');
+      const q = document.getElementById('filter-app-search');
+      if (d) d.value = '';
+      if (s) s.value = 'todos';
+      if (q) q.value = '';
       loadAppointments();
+      if (currentAppointmentsView === 'calendar') {
+        loadAppointmentsForCalendar();
+      }
     }
 
     document.getElementById('filter-date').addEventListener('change', loadAppointments);
